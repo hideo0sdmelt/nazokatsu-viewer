@@ -44,6 +44,10 @@ button,select,.chip{cursor:pointer}
 button:hover{filter:brightness(.93)}
 button:disabled,select:disabled{cursor:wait;opacity:.6}
 .save.busy::before{content:"";display:inline-block;width:14px;height:14px;margin-right:8px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px}
+.card.editing{position:relative}
+.saving{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:12px;background:rgba(255,255,255,.85);background:color-mix(in srgb,var(--card) 82%,transparent);font-size:16px;font-weight:700}
+.saving[hidden]{display:none}
+.saving .spin{margin:0}
 .head h2{flex:1}
 .edit-btn{flex:none;height:36px;padding:0 14px;font-size:14px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--accent)}
 .edit{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
@@ -204,13 +208,15 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     const changes = FIELDS.filter(([k]) => String(next[k]) !== String(r[k]));
     if (!changes.length) {
       editingId = null;
-      return render();
+      render();
+      return toast("変更点がないため、何も更新していません");
     }
     if (!next.playDate) return alert("参加日は空にできません");
     const lines = changes.map(([k, label]) => `${label}: ${show(r[k])} → ${show(next[k])}`);
     const warn = changes.some(([k]) => k === "isPrivate") ? "\n※公開範囲が変わります" : "";
     if (!confirm(`「${r.title}」のナゾ活を更新します\n\n${lines.join("\n")}${warn}\n\nよろしいですか？`)) return;
-    setBusy(true);
+    setBusy(true, "保存中…");
+    const startedAt = Date.now();
     const auth = await getAuth();
     const payload = Object.fromEntries(changes.map(([k, , api, conv]) => [api, conv(next[k])]));
     const res = await fetch(`/api/v2/reviews/${encodeURIComponent(r.id)}`, {
@@ -220,9 +226,12 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok || body.success !== true) throw new Error(`更新に失敗しました: ${res.status} ${JSON.stringify(body).slice(0, 200)}`);
+    setBusy(true, "反映を確認中…");
     data = await fetchAll(auth);
     const after = data.find((x) => x.id === r.id);
     const bad = changes.filter(([k]) => String(after?.[k]) !== String(next[k]));
+    // 通信が速いと表示が一瞬で消えるため、最低0.8秒は保存中を見せる
+    await new Promise((resolve) => setTimeout(resolve, Math.max(0, 800 - (Date.now() - startedAt))));
     editingId = null;
     render();
     if (bad.length) alert(`更新後の値が期待と違います: ${bad.map(([, l]) => l).join("、")}`);
@@ -250,7 +259,8 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
 <label class="chk"><input name="isPrivate" type="checkbox">非公開</label>
 <label class="chk"><input name="spoiler" type="checkbox">ネタバレあり</label>
 <label class="wide">感想（5000字まで）<textarea name="review" maxlength="5000"></textarea></label>
-<div class="actions"><button type="submit" class="save">保存</button><button type="button" class="cancel">キャンセル</button></div>`;
+<div class="actions"><button type="submit" class="save">保存</button><button type="button" class="cancel">キャンセル</button></div>
+<div class="saving" hidden><div class="spin"></div><span></span></div>`;
     const f = form.elements;
     f.playDate.value = r.playDate;
     f.satisfaction.value = String(r.satisfaction);
@@ -263,10 +273,13 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const saveBtn = form.querySelector(".save");
-      const setBusy = (on) => {
+      const overlay = form.querySelector(".saving");
+      const setBusy = (on, text = "") => {
         for (const c of form.querySelectorAll("input,select,textarea,button")) c.disabled = on;
         saveBtn.classList.toggle("busy", on);
         saveBtn.textContent = on ? "保存中…" : "保存";
+        overlay.hidden = !on;
+        overlay.querySelector("span").textContent = text;
       };
       try {
         await save(r, {
