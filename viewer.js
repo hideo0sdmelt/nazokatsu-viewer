@@ -126,7 +126,8 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       if (!res.ok) throw new Error(`取得に失敗しました（${res.status}）`);
       const j = await res.json();
       all.push(...j.reviews);
-      if (all.length >= j.count || j.reviews.length === 0) return all.map(toItem);
+      // APIは投稿日時の新しい順で返すため、取得順を投稿日順として使う
+      if (all.length >= j.count || j.reviews.length === 0) return all.map((r, seq) => ({ ...toItem(r), seq }));
     }
   };
   let data;
@@ -144,6 +145,8 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     <select id="sort">
       <option value="date-desc">参加日 新しい順</option>
       <option value="date-asc">参加日 古い順</option>
+      <option value="posted-desc">投稿日 新しい順</option>
+      <option value="posted-asc">投稿日 古い順</option>
       <option value="sat-desc">満足度 高い順</option>
       <option value="sat-asc">満足度 低い順</option>
       <option value="title">作品名順</option>
@@ -156,6 +159,8 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     </select>
     <label class="chip"><input id="priv" type="checkbox">非公開のみ</label>
     <label class="chip"><input id="withReview" type="checkbox">感想ありのみ</label>
+    <label class="chip"><input id="noDate" type="checkbox">参加日なしのみ</label>
+    <label class="chip"><input id="noRating" type="checkbox">満足度・難易度・時間の未入力ありのみ</label>
   </div>
 </div>
 <div id="count"></div>
@@ -165,6 +170,8 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   const sorters = {
     "date-desc": (a, b) => b.playDate.localeCompare(a.playDate),
     "date-asc": (a, b) => a.playDate.localeCompare(b.playDate),
+    "posted-desc": (a, b) => a.seq - b.seq,
+    "posted-asc": (a, b) => b.seq - a.seq,
     "sat-desc": (a, b) => num(b.satisfaction) - num(a.satisfaction),
     "sat-asc": (a, b) => num(a.satisfaction) - num(b.satisfaction),
     title: (a, b) => a.title.localeCompare(b.title, "ja"),
@@ -371,12 +378,14 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
         if (result === "-" ? r.result !== "" : result && r.result !== result) return false;
         if ($("priv").checked && !r.isPrivate) return false;
         if ($("withReview").checked && !r.review) return false;
+        if ($("noDate").checked && r.playDate) return false;
+        if ($("noRating").checked && r.satisfaction !== "" && r.difficulty !== "" && r.minutes !== "") return false;
         return true;
       })
       .sort(sorters[$("sort").value]);
     $("count").textContent = `${rows.length} / ${data.length} 件（取得 ${new Date().toLocaleTimeString("ja-JP")}）`;
     $("list").replaceChildren(...rows.map((r) => card(r, words)));
   };
-  for (const id of ["q", "sort", "result", "priv", "withReview"]) $(id).addEventListener("input", render);
+  for (const id of ["q", "sort", "result", "priv", "withReview", "noDate", "noRating"]) $(id).addEventListener("input", render);
   render();
 })().catch((e) => alert("エラー: " + e.message));
