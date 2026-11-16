@@ -19,23 +19,8 @@
 #close{min-height:48px;padding:0 22px;font-size:18px;font-weight:700;border:0;border-radius:10px;background:var(--accent);color:var(--on)}
 .wrap{max-width:820px;margin:0 auto;padding:0 12px 40px}
 .bar{position:sticky;top:69px;z-index:2;background:var(--bg);padding:10px 0 8px}
-.search{display:flex;gap:8px}
-#q{flex:1;min-width:0;width:100%;height:46px;padding:0 14px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}
-#toggle{display:none;flex:none;height:46px;padding:0 14px;font-size:15px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}
-#toggle.on{border-color:var(--accent);color:var(--accent);font-weight:700}
-#toggle::after{content:"▼";margin-left:6px;font-size:11px;vertical-align:1px}
-#toggle[aria-expanded=true]{background:var(--chip)}
-#toggle[aria-expanded=true]::after{content:"▲"}
+#q{width:100%;height:46px;padding:0 14px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}
 .filters{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-@media (max-width:640px){
-.top{padding:6px 12px}
-.top h1{font-size:16px}
-#close{min-height:44px;padding:0 16px;font-size:16px}
-.bar{top:57px}
-#toggle{display:block}
-.filters{display:none}
-.bar.show .filters{display:flex}
-}
 .filters select{height:38px;font-size:14px;padding:0 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text)}
 .chip{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card)}
 #count{font-size:13px;color:var(--sub);margin:6px 2px 10px}
@@ -56,9 +41,8 @@
 .card.long.open::after{content:"タップで折りたたむ"}
 .head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 button,select,.chip{cursor:pointer}
-@media (hover:hover){button:hover{filter:brightness(.93)}}
+button:hover{filter:brightness(.93)}
 button:disabled,select:disabled{cursor:wait;opacity:.6}
-.save.busy::before{content:"";display:inline-block;width:14px;height:14px;margin-right:8px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px}
 .card.editing{position:relative}
 .saving{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:12px;background:rgba(255,255,255,.85);background:color-mix(in srgb,var(--card) 82%,transparent);font-size:16px;font-weight:700}
 .saving[hidden]{display:none}
@@ -74,6 +58,7 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 .edit .actions{grid-column:1/-1;display:flex;gap:10px}
 .edit .actions button{flex:1;height:46px;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text)}
 .edit .actions .save{background:var(--accent);color:var(--on);border:0;font-weight:700}
+.edit .actions .del{flex:none;padding:0 16px;color:#c0392b;border-color:#c0392b}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:90%;padding:10px 16px;border-radius:10px;background:#222;color:#fff;font-size:14px;z-index:9}
 mark{background:#ffe96b;color:#222;border-radius:2px}
 .loading{text-align:center;margin-top:30vh;font-size:16px;color:var(--sub)}
@@ -131,6 +116,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     isPrivate: r.isPrivate === true,
     spoiler: r.containsSpoiler === true,
     review: (r.review ?? "").replaceAll("\r\n", "\n"),
+    photos: (r.allPhotoUrls ?? []).filter((u) => u?.includes("supabase.co/storage")),
   });
   const fetchAll = async (auth) => {
     const all = [];
@@ -155,10 +141,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
 
   $("main").innerHTML = `<div class="wrap">
 <div class="bar">
-  <div class="search">
-    <input id="q" type="search" placeholder="作品名・感想を検索（スペースでAND）">
-    <button id="toggle" type="button" aria-expanded="false">絞り込み</button>
-  </div>
+  <input id="q" type="search" placeholder="作品名・感想を検索（スペースでAND）">
   <div class="filters">
     <select id="sort">
       <option value="date-desc">参加日 新しい順</option>
@@ -262,6 +245,41 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     if (bad.length) alert(`更新後の値が期待と違います: ${bad.map(([, l]) => l).join("、")}`);
     else toast(`更新しました（${changes.map(([, l]) => l).join("、")}）`);
   };
+  // サイト本体と同じ DELETE /api/v2/reviews/{id}。成功後に取得し直して消えたことを確かめる
+  const remove = async (r, setBusy) => {
+    const lines = [`「${r.title}」のナゾ活を削除します`, r.playDate && `参加日: ${r.playDate}`];
+    if (!r.isPrivate) lines.push("※公開中のナゾ活です");
+    if (r.photos.length) lines.push(`添付写真${r.photos.length}枚も削除されます`);
+    if (!confirm(`${lines.filter(Boolean).join("\n")}\n\n元に戻せません。よろしいですか？`)) return;
+    setBusy(true, "削除中…");
+    const startedAt = Date.now();
+    const auth = await getAuth();
+    const res = await fetch(`/api/v2/reviews/${encodeURIComponent(r.id)}`, {
+      method: "DELETE",
+      headers: { ...auth.headers, "content-type": "application/json" },
+      body: JSON.stringify({ uid: auth.uid, isPrivate: r.isPrivate }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || body.success !== true) throw new Error(`削除に失敗しました: ${res.status} ${JSON.stringify(body).slice(0, 200)}`);
+    // ナゾ活は削除済みのため、写真の削除に失敗しても続行する
+    let photoFailed = 0;
+    for (const imageUrl of r.photos) {
+      const pr = await fetch("/api/v2/reviews/delete-image", {
+        method: "POST",
+        headers: { ...auth.headers, "content-type": "application/json" },
+        body: JSON.stringify({ imageUrl }),
+      }).catch(() => null);
+      if (!pr?.ok) photoFailed++;
+    }
+    setBusy(true, "反映を確認中…");
+    data = await fetchAll(auth);
+    await new Promise((resolve) => setTimeout(resolve, Math.max(0, 800 - (Date.now() - startedAt))));
+    editingId = null;
+    render();
+    if (data.some((x) => x.id === r.id)) alert("削除後も一覧に残っています。ページを再読み込みして確認してください");
+    else if (photoFailed) alert(`ナゾ活は削除しましたが、写真${photoFailed}枚の削除に失敗しました`);
+    else toast(`「${r.title}」を削除しました`);
+  };
   const options = (list, current) => {
     const items = current !== "" && !list.some(([v]) => String(v) === String(current)) ? [...list, [current, current]] : list;
     return items.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
@@ -284,7 +302,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
 <label class="chk"><input name="isPrivate" type="checkbox">非公開</label>
 <label class="chk"><input name="spoiler" type="checkbox">ネタバレあり</label>
 <label class="wide">感想（5000字まで）<textarea name="review" maxlength="5000"></textarea></label>
-<div class="actions"><button type="submit" class="save">保存</button><button type="button" class="cancel">キャンセル</button></div>
+<div class="actions"><button type="submit" class="save">保存</button><button type="button" class="cancel">キャンセル</button><button type="button" class="del">削除</button></div>
 <div class="saving" hidden><div class="spin"></div><span></span></div>`;
     const f = form.elements;
     f.playDate.value = r.playDate;
@@ -295,17 +313,23 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     f.isPrivate.checked = r.isPrivate;
     f.spoiler.checked = r.spoiler;
     f.review.value = r.review;
+    const overlay = form.querySelector(".saving");
+    const setBusy = (on, text = "") => {
+      for (const c of form.querySelectorAll("input,select,textarea,button")) c.disabled = on;
+      overlay.hidden = !on;
+      overlay.querySelector("span").textContent = text;
+    };
+    form.querySelector(".del").addEventListener("click", async () => {
+      try {
+        await remove(r, setBusy);
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        setBusy(false);
+      }
+    });
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const saveBtn = form.querySelector(".save");
-      const overlay = form.querySelector(".saving");
-      const setBusy = (on, text = "") => {
-        for (const c of form.querySelectorAll("input,select,textarea,button")) c.disabled = on;
-        saveBtn.classList.toggle("busy", on);
-        saveBtn.textContent = on ? "保存中…" : "保存";
-        overlay.hidden = !on;
-        overlay.querySelector("span").textContent = text;
-      };
       try {
         await save(r, {
           playDate: f.playDate.value,
@@ -402,18 +426,8 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       })
       .sort(sorters[$("sort").value]);
     $("count").textContent = `${rows.length} / ${data.length} 件（取得 ${new Date().toLocaleTimeString("ja-JP")}）`;
-    // スマホで絞り込みを畳んでいても、効いている条件の数が分かるようにする
-    const active = [result !== "", ...["priv", "withReview", "noDate", "noRating"].map((id) => $(id).checked)].filter(Boolean).length;
-    $("toggle").textContent = active ? `絞り込み(${active})` : "絞り込み";
-    $("toggle").classList.toggle("on", active > 0);
     $("list").replaceChildren(...rows.map((r) => card(r, words)));
   };
   for (const id of ["q", "sort", "result", "priv", "withReview", "noDate", "noRating"]) $(id).addEventListener("input", render);
-  // 幅640px以下（スマホ）では絞り込み条件を畳み、一覧を広く見せる。PCでは常に表示（ボタンも出ない）
-  $("toggle").addEventListener("click", () => {
-    const bar = root.querySelector(".bar");
-    bar.classList.toggle("show");
-    $("toggle").setAttribute("aria-expanded", String(bar.classList.contains("show")));
-  });
   render();
 })().catch((e) => alert("エラー: " + e.message));
