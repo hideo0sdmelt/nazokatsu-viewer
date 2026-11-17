@@ -19,8 +19,23 @@
 #close{min-height:48px;padding:0 22px;font-size:18px;font-weight:700;border:0;border-radius:10px;background:var(--accent);color:var(--on)}
 .wrap{max-width:820px;margin:0 auto;padding:0 12px 40px}
 .bar{position:sticky;top:69px;z-index:2;background:var(--bg);padding:10px 0 8px}
-#q{width:100%;height:46px;padding:0 14px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}
+.search{display:flex;gap:8px}
+#q{flex:1;min-width:0;width:100%;height:46px;padding:0 14px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}
+#toggle{display:none;flex:none;height:46px;padding:0 14px;font-size:15px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}
+#toggle.on{border-color:var(--accent);color:var(--accent);font-weight:700}
+#toggle::after{content:"▼";margin-left:6px;font-size:11px;vertical-align:1px}
+#toggle[aria-expanded=true]{background:var(--chip)}
+#toggle[aria-expanded=true]::after{content:"▲"}
 .filters{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+@media (max-width:640px){
+.top{padding:6px 12px}
+.top h1{font-size:16px}
+#close{min-height:44px;padding:0 16px;font-size:16px}
+.bar{top:57px}
+#toggle{display:block}
+.filters{display:none}
+.bar.show .filters{display:flex}
+}
 .filters select{height:38px;font-size:14px;padding:0 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text)}
 .chip{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card)}
 #count{font-size:13px;color:var(--sub);margin:6px 2px 10px}
@@ -41,8 +56,9 @@
 .card.long.open::after{content:"タップで折りたたむ"}
 .head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 button,select,.chip{cursor:pointer}
-button:hover{filter:brightness(.93)}
+@media (hover:hover){button:hover{filter:brightness(.93)}}
 button:disabled,select:disabled{cursor:wait;opacity:.6}
+.save.busy::before{content:"";display:inline-block;width:14px;height:14px;margin-right:8px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px}
 .card.editing{position:relative}
 .saving{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:12px;background:rgba(255,255,255,.85);background:color-mix(in srgb,var(--card) 82%,transparent);font-size:16px;font-weight:700}
 .saving[hidden]{display:none}
@@ -141,7 +157,10 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
 
   $("main").innerHTML = `<div class="wrap">
 <div class="bar">
-  <input id="q" type="search" placeholder="作品名・感想を検索（スペースでAND）">
+  <div class="search">
+    <input id="q" type="search" placeholder="作品名・感想を検索（スペースでAND）">
+    <button id="toggle" type="button" aria-expanded="false">絞り込み</button>
+  </div>
   <div class="filters">
     <select id="sort">
       <option value="date-desc">参加日 新しい順</option>
@@ -313,15 +332,18 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     f.isPrivate.checked = r.isPrivate;
     f.spoiler.checked = r.spoiler;
     f.review.value = r.review;
+    const saveBtn = form.querySelector(".save");
     const overlay = form.querySelector(".saving");
-    const setBusy = (on, text = "") => {
+    const setBusy = (on, text = "", spinSave = true) => {
       for (const c of form.querySelectorAll("input,select,textarea,button")) c.disabled = on;
+      saveBtn.classList.toggle("busy", on && spinSave);
+      saveBtn.textContent = on && spinSave ? "保存中…" : "保存";
       overlay.hidden = !on;
       overlay.querySelector("span").textContent = text;
     };
     form.querySelector(".del").addEventListener("click", async () => {
       try {
-        await remove(r, setBusy);
+        await remove(r, (on, text) => setBusy(on, text, false));
       } catch (err) {
         alert(err.message);
       } finally {
@@ -426,8 +448,18 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       })
       .sort(sorters[$("sort").value]);
     $("count").textContent = `${rows.length} / ${data.length} 件（取得 ${new Date().toLocaleTimeString("ja-JP")}）`;
+    // スマホで絞り込みを畳んでいても、効いている条件の数が分かるようにする
+    const active = [result !== "", ...["priv", "withReview", "noDate", "noRating"].map((id) => $(id).checked)].filter(Boolean).length;
+    $("toggle").textContent = active ? `絞り込み(${active})` : "絞り込み";
+    $("toggle").classList.toggle("on", active > 0);
     $("list").replaceChildren(...rows.map((r) => card(r, words)));
   };
   for (const id of ["q", "sort", "result", "priv", "withReview", "noDate", "noRating"]) $(id).addEventListener("input", render);
+  // 幅640px以下（スマホ）では絞り込み条件を畳み、一覧を広く見せる。PCでは常に表示（ボタンも出ない）
+  $("toggle").addEventListener("click", () => {
+    const bar = root.querySelector(".bar");
+    bar.classList.toggle("show");
+    $("toggle").setAttribute("aria-expanded", String(bar.classList.contains("show")));
+  });
   render();
 })().catch((e) => alert("エラー: " + e.message));
