@@ -420,17 +420,32 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       p.className = "review";
       highlight(p, r.review, words);
       el.append(p);
-      if (r.review.length > 90 || r.review.includes("\n")) {
-        el.classList.add("long");
-        // 検索中はヒット箇所が隠れないよう最初から全文を開く
-        if (words.length) el.classList.add("open");
-        el.addEventListener("click", (e) => {
-          if (!e.target.closest("a, button")) el.classList.toggle("open");
-        });
-      }
+      // 長いかどうか（.long）は表示後に markLong で実際に3行に収まらないかを測って決める
+      el.addEventListener("click", (e) => {
+        if (el.classList.contains("long") && !e.target.closest("a, button")) el.classList.toggle("open");
+      });
     }
     return el;
   };
+  // 文字数や改行の有無ではなく、折りたたんだ状態で実際に切れているカードだけに「タップで全文を表示」を付ける。
+  // openAll（検索中）はヒット箇所が隠れないよう、切れるカードを最初から開く
+  const markLong = (openAll) => {
+    for (const el of $("list").querySelectorAll(".card")) {
+      const p = el.querySelector(".review");
+      if (!p) continue;
+      const wasOpen = el.classList.contains("open");
+      el.classList.remove("open");
+      const long = p.scrollHeight > p.clientHeight + 1;
+      el.classList.toggle("long", long);
+      if (long && (wasOpen || openAll)) el.classList.add("open");
+    }
+  };
+  // 画面の向きや幅が変わると切れる行数も変わるので測り直す
+  let resizeTimer;
+  addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => host.isConnected && markLong(false), 150);
+  });
   const render = () => {
     const words = $("q").value.trim().split(/\s+/).filter(Boolean);
     const lower = words.map((w) => w.toLowerCase());
@@ -453,6 +468,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     $("toggle").textContent = active ? `絞り込み(${active})` : "絞り込み";
     $("toggle").classList.toggle("on", active > 0);
     $("list").replaceChildren(...rows.map((r) => card(r, words)));
+    markLong(words.length > 0);
   };
   for (const id of ["q", "sort", "result", "priv", "withReview", "noDate", "noRating"]) $(id).addEventListener("input", render);
   // 幅640px以下（スマホ）では絞り込み条件を畳み、一覧を広く見せる。PCでは常に表示（ボタンも出ない）
