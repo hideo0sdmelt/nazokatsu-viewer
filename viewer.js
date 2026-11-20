@@ -19,7 +19,9 @@
 #close{min-height:48px;padding:0 22px;font-size:18px;font-weight:700;border:0;border-radius:10px;background:var(--accent);color:var(--on)}
 .wrap{max-width:820px;margin:0 auto;padding:0 12px 40px}
 .bar{position:sticky;top:69px;z-index:2;background:var(--bg);padding:10px 0 8px}
-.search{display:flex;gap:8px}
+.search{position:relative;display:flex;gap:8px}
+#qhint{position:absolute;left:0;top:calc(100% + 6px);z-index:4;max-width:100%;padding:6px 10px;border-radius:8px;background:#2b2f3a;color:#fff;font-size:12px;line-height:1.5;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none}
+#qhint[hidden]{display:none}
 #q{flex:1;min-width:0;width:100%;height:46px;padding:0 14px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}
 #toggle{display:none;flex:none;height:46px;padding:0 14px;font-size:15px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}
 #toggle.on{border-color:var(--accent);color:var(--accent);font-weight:700}
@@ -197,6 +199,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   <div class="search">
     <input id="q" type="search" placeholder="作品名・感想を検索">
     <button id="toggle" type="button" aria-expanded="false">絞り込み</button>
+    <div id="qhint" hidden>スペースで区切ると、すべての言葉を含むものに絞り込みます</div>
   </div>
   <div class="filters">
     <select id="sort">
@@ -553,6 +556,20 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     sel.replaceChildren(new Option("レーベル: すべて", ""), ...opts);
     sel.value = [...sel.options].some((o) => o.value === current) ? current : "";
   };
+  // 2語以上で検索したことがあるか。ナゾヒロバのページの localStorage に1件だけ残す（使えなければ毎回出す）
+  const AND_USED_KEY = "nazokatsuViewerAndUsed";
+  const andUsed = () => {
+    try {
+      return localStorage.getItem(AND_USED_KEY) === "1";
+    } catch {
+      return false;
+    }
+  };
+  const rememberAndUsed = () => {
+    try {
+      localStorage.setItem(AND_USED_KEY, "1");
+    } catch {}
+  };
   const render = () => {
     fillMakers();
     const words = $("q").value.trim().split(/\s+/).filter(Boolean);
@@ -572,7 +589,13 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
         return true;
       })
       .sort(sorters[$("sort").value]);
-    $("count").textContent = `${rows.length} / ${data.length} 件（取得 ${new Date().toLocaleTimeString("ja-JP")}）`;
+    // 2語以上のときは、すべての語を含むもの（AND）に絞っていることを件数の行で言葉にする。
+    // スマホで2行に折り返さないよう、その間は取得時刻を省く
+    $("count").textContent =
+      words.length > 1
+        ? `${words.map((w) => `「${w}」`).join("")}をすべて含む ${rows.length} / ${data.length} 件`
+        : `${rows.length} / ${data.length} 件（取得 ${new Date().toLocaleTimeString("ja-JP")}）`;
+    if (words.length > 1) rememberAndUsed();
     // スマホで絞り込みを畳んでいても、効いている条件の数が分かるようにする
     const active = [result !== "", maker !== "", ...["priv", "withReview", "noDate", "noRating"].map((id) => $(id).checked)].filter(Boolean).length;
     $("toggle").textContent = active ? `絞り込み(${active})` : "絞り込み";
@@ -581,6 +604,12 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     markLong(words.length > 0);
   };
   for (const id of ["q", "sort", "result", "maker", "priv", "withReview", "noDate", "noRating"]) $(id).addEventListener("input", render);
+  // 検索欄が空のまま選ばれているときだけ、スペース区切りで絞り込めることを吹き出しで出す。
+  // 打ち始めるか欄から離れると消える。一度2語以上で検索したら、知っているとみなして出さない
+  const syncHint = () => {
+    $("qhint").hidden = !(root.activeElement === $("q") && !$("q").value && !andUsed());
+  };
+  for (const type of ["focus", "blur", "input"]) $("q").addEventListener(type, syncHint);
   // 幅640px以下（スマホ）では絞り込み条件を畳み、一覧を広く見せる。PCでは常に表示（ボタンも出ない）
   $("toggle").addEventListener("click", () => {
     const bar = root.querySelector(".bar");
