@@ -49,7 +49,7 @@
 .tag.ng{background:#fde0e0;color:#a12a2a}
 .tag.priv{background:#e4e0f5;color:#4b3a9a}
 .tag.spoil{background:#ffe9cc;color:#9a5a00}
-.review{white-space:pre-wrap;margin:10px 0 0;font-size:15px;line-height:1.6;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.review{white-space:pre-wrap;margin:10px 0 0;font-size:15px;line-height:1.6;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .card.open .review{display:block;-webkit-line-clamp:unset}
 .card.long{cursor:pointer}
 .card.long::after{content:"タップで全文を表示";display:block;margin-top:6px;font-size:12px;color:var(--sub)}
@@ -420,7 +420,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       p.className = "review";
       highlight(p, r.review, words);
       el.append(p);
-      // 長いかどうか（.long）は表示後に markLong で実際に3行に収まらないかを測って決める
+      // 長いかどうか（.long）は表示後に markLong で実際に2行に収まらないかを測って決める
       el.addEventListener("click", (e) => {
         if (el.classList.contains("long") && !e.target.closest("a, button")) el.classList.toggle("open");
       });
