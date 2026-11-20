@@ -28,10 +28,11 @@
 #toggle[aria-expanded=true]::after{content:"▲"}
 .filters{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 @media (max-width:640px){
-.top{padding:6px 12px}
-.top h1{font-size:16px}
-#close{min-height:44px;padding:0 16px;font-size:16px}
-.bar{top:57px}
+.top{padding:4px 12px}
+.top h1{font-size:15px}
+#close{min-height:32px;padding:0 14px;font-size:14px;border-radius:8px}
+.bar{top:41px;padding:6px 0}
+#q,#toggle{height:40px}
 #toggle{display:block}
 .filters{display:none}
 .bar.show .filters{display:flex}
@@ -39,12 +40,13 @@
 .filters select{height:38px;font-size:14px;padding:0 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text)}
 .chip{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card)}
 #count{font-size:13px;color:var(--sub);margin:6px 2px 10px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
 .card h2{font-size:16px;line-height:1.4;margin:0 0 8px}
 .card h2 a{color:var(--accent);text-decoration:none}
 .meta{display:flex;flex-wrap:wrap;gap:6px}
 .tag{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--sub)}
 .tag.star{color:#b7791f;font-weight:700}
+.tag.maker{background:none;border:1px solid var(--line);color:var(--text)}
 .tag.ok{background:#d9f2e1;color:#14663a}
 .tag.ng{background:#fde0e0;color:#a12a2a}
 .tag.priv{background:#e4e0f5;color:#4b3a9a}
@@ -52,9 +54,19 @@
 .review{white-space:pre-wrap;margin:10px 0 0;font-size:15px;line-height:1.6;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .card.open .review{display:block;-webkit-line-clamp:unset}
 .card.long{cursor:pointer}
-.card.long::after{content:"タップで全文を表示";display:block;margin-top:6px;font-size:12px;color:var(--sub)}
-.card.long.open::after{content:"タップで折りたたむ"}
+.card.long::after{content:"…続き ▾";position:absolute;right:14px;bottom:12px;padding-left:36px;font-size:12px;line-height:24px;color:var(--sub);background:linear-gradient(to right,transparent,var(--card) 32px)}
+.card.long.open::after{content:"たたむ ▴";position:static;display:block;padding:0;text-align:right;line-height:1.6;background:none}
 .head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+@media (max-width:640px){
+.card{padding:8px 10px;margin-bottom:6px}
+.card h2{font-size:15px;line-height:1.35;margin:0 0 5px}
+.meta{gap:4px}
+.tag{font-size:11px;padding:1px 6px}
+.review{margin-top:5px;font-size:14px;line-height:1.5}
+.card.long::after{right:10px;bottom:8px;line-height:21px}
+.edit-btn{height:26px;margin:-3px 0;padding:0 8px}
+#count{margin:4px 2px 6px}
+}
 button,select,.chip{cursor:pointer}
 @media (hover:hover){button:hover{filter:brightness(.93)}}
 button:disabled,select:disabled{cursor:wait;opacity:.6}
@@ -64,7 +76,7 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 .saving[hidden]{display:none}
 .saving .spin{margin:0}
 .head h2{flex:1}
-.edit-btn{flex:none;height:36px;padding:0 14px;font-size:14px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--accent)}
+.edit-btn{flex:none;height:30px;padding:0 10px;font-size:13px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--accent)}
 .edit{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
 .edit label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--sub)}
 .edit input[type=date],.edit select,.edit textarea{font-size:16px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
@@ -120,10 +132,13 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     }
     return { uid: user.uid, headers: { authorization: `Bearer ${user.stsTokenManager.accessToken}` } };
   };
+  // 作品ID → レーベル（ナゾヒロバの作品の maker 欄）。編集後に取り直したときも使えるよう取得結果を残しておく
+  const makers = new Map();
   const toItem = (r) => ({
     id: r.id,
     mysteryId: r.mysteryId ?? "",
     title: r.mysteryTitle ?? "",
+    maker: makers.get(r.mysteryId) ?? "",
     playDate: (r.playDate ?? "").slice(0, 10),
     satisfaction: r.satisfactionRating ?? "",
     difficulty: r.difficultyRating ?? "",
@@ -147,18 +162,40 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       if (all.length >= j.count || j.reviews.length === 0) return all.map((r, seq) => ({ ...toItem(r), seq }));
     }
   };
+  // ナゾ活のAPIはレーベルを返さないため、作品のレーベルをナゾヒロバと同じ公開データ（Supabase）から引く。
+  // 取れなくても一覧は出す（レーベルの絞り込みが「不明」だけになる）
+  const SUPABASE_URL = "https://prtwipndhcaxbuumlzgg.supabase.co";
+  const SUPABASE_ANON_KEY =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBydHdpcG5kaGNheGJ1dW1semdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDQ3NzE0MDAsImV4cCI6MjAyMDM0NzQwMH0.HomCCnxEoeL6r7E2U3k2vp3hy3PNAuqsGsTMdNHEtqM";
+  const loadMakers = async (items) => {
+    const ids = [...new Set(items.map((r) => r.mysteryId).filter((id) => id && !makers.has(id)))];
+    for (let i = 0; i < ids.length; i += 100) {
+      const params = new URLSearchParams({ select: "id,maker", id: `in.(${ids.slice(i, i + 100).map((id) => `"${id}"`).join(",")})` });
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/mysteries?${params}`, {
+        headers: { apikey: SUPABASE_ANON_KEY, authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      });
+      if (!res.ok) throw new Error(`レーベルの取得に失敗しました（${res.status}）`);
+      for (const m of await res.json()) makers.set(m.id, (m.maker ?? "").trim());
+    }
+    for (const r of items) r.maker = makers.get(r.mysteryId) ?? "";
+  };
   let data;
   try {
     data = await fetchAll(await getAuth());
   } catch (e) {
     return fail(e.message);
   }
+  try {
+    await loadMakers(data);
+  } catch (e) {
+    console.warn(e);
+  }
   if (!host.isConnected) return;
 
   $("main").innerHTML = `<div class="wrap">
 <div class="bar">
   <div class="search">
-    <input id="q" type="search" placeholder="作品名・感想を検索（スペースでAND）">
+    <input id="q" type="search" placeholder="作品名・感想を検索">
     <button id="toggle" type="button" aria-expanded="false">絞り込み</button>
   </div>
   <div class="filters">
@@ -177,6 +214,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       <option value="失敗">失敗</option>
       <option value="-">未設定</option>
     </select>
+    <select id="maker"></select>
     <label class="chip"><input id="priv" type="checkbox">非公開のみ</label>
     <label class="chip"><input id="withReview" type="checkbox">感想ありのみ</label>
     <label class="chip"><input id="noDate" type="checkbox">参加日なしのみ</label>
@@ -407,6 +445,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       s.textContent = text;
       meta.append(s);
     };
+    if (r.maker) tag(r.maker, "maker");
     if (r.playDate) tag(r.playDate);
     if (r.satisfaction !== "") tag(`★ ${r.satisfaction}`, "star");
     if (r.difficulty !== "") tag(`難易度 ${r.difficulty}`);
@@ -446,15 +485,86 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => host.isConnected && markLong(false), 150);
   });
+  // コラボ（「Tumbleweed,よだかのレコード」など）を、含まれる各レーベルに属させる。
+  // maker 欄を区切りで語に分け、自分のナゾ活に単独で出てくるレーベルの語の並びを含んでいれば、そのレーベルにも入れる。
+  // 「NAZO×NAZO劇団」「Toy×ボーズ」のような名前があるので、× は両側に空白があるときだけ区切りとみなす。
+  // 比べるときは全角半角・大文字小文字・末尾の「！」の違いを無視し、カタカナ表記は ALIASES で揃える
+  // 文字コードの指定なしで配信されても構文が壊れないよう、キーは引用符で囲み、正規表現の全角文字はエスケープで書く
+  // （NFKC で「！，／」は半角になる。× は ×、、 は 、）
+  const ALIASES = { "タンブルウィード": "tumbleweed" };
+  const labelWords = (s) =>
+    s
+      .normalize("NFKC")
+      .toLowerCase()
+      .split(/\s+×\s+|[,、/]|\s+/)
+      .map((w) => w.replace(/!+$/, "").trim())
+      .filter(Boolean)
+      .map((w) => ALIASES[w] ?? w);
+  const indexOfSeq = (hay, needle) => {
+    for (let i = 0; i + needle.length <= hay.length; i++) if (needle.every((w, j) => hay[i + j] === w)) return i;
+    return -1;
+  };
+  // 生の maker 欄 → 属するレーベル（表示名）の一覧
+  let labelsOf = new Map();
+  const buildLabels = () => {
+    // 同じ語の並びになる表記はまとめ、件数の多い書き方を表示名にする
+    const byKey = new Map();
+    for (const r of data) {
+      if (!r.maker) continue;
+      const key = labelWords(r.maker).join(" ");
+      const g = byKey.get(key) ?? { words: labelWords(r.maker), names: new Map() };
+      g.names.set(r.maker, (g.names.get(r.maker) ?? 0) + 1);
+      byKey.set(key, g);
+    }
+    // 語の少ない表記から順に、それより前に決まったレーベルだけで説明しきれるか（＝コラボか）を見る。
+    // 説明しきれない表記は、それ自体を1つのレーベルとして後の表記の判定に使う
+    const atoms = [];
+    labelsOf = new Map();
+    for (const g of [...byKey.values()].sort((a, b) => a.words.length - b.words.length)) {
+      const name = [...g.names].sort((a, b) => b[1] - a[1])[0][0];
+      const covered = new Array(g.words.length).fill(false);
+      const parts = [];
+      for (const k of atoms) {
+        const at = indexOfSeq(g.words, k.words);
+        if (at < 0) continue;
+        parts.push(k.name);
+        for (let j = at; j < at + k.words.length; j++) covered[j] = true;
+      }
+      let labels = parts;
+      // 一部しか既知のレーベルで説明できないときは、コラボの表記そのものも選択肢に残す
+      if (!parts.length || !covered.every(Boolean)) {
+        atoms.push({ words: g.words, name });
+        labels = [name, ...parts];
+      }
+      for (const raw of g.names.keys()) labelsOf.set(raw, labels);
+    }
+  };
+  const labelsOfItem = (r) => labelsOf.get(r.maker) ?? [];
+  // レーベルの選択肢は件数の多い順で「不明」は最後。編集・削除で件数が変わるので描画のたびに作り直し、選択は保つ
+  const fillMakers = () => {
+    buildLabels();
+    const sel = $("maker");
+    const current = sel.value;
+    const counts = new Map();
+    for (const r of data) for (const m of r.maker ? labelsOfItem(r) : [""]) counts.set(m, (counts.get(m) ?? 0) + 1);
+    const opts = [...counts]
+      .sort((a, b) => !a[0] - !b[0] || b[1] - a[1] || a[0].localeCompare(b[0], "ja"))
+      .map(([m, n]) => new Option(`${m || "不明"}（${n}）`, m || "-"));
+    sel.replaceChildren(new Option("レーベル: すべて", ""), ...opts);
+    sel.value = [...sel.options].some((o) => o.value === current) ? current : "";
+  };
   const render = () => {
+    fillMakers();
     const words = $("q").value.trim().split(/\s+/).filter(Boolean);
     const lower = words.map((w) => w.toLowerCase());
     const result = $("result").value;
+    const maker = $("maker").value;
     const rows = data
       .filter((r) => {
-        const hay = `${r.title}\n${r.review}`.toLowerCase();
+        const hay = `${r.title}\n${r.maker}\n${labelsOfItem(r).join("\n")}\n${r.review}`.toLowerCase();
         if (!lower.every((w) => hay.includes(w))) return false;
         if (result === "-" ? r.result !== "" : result && r.result !== result) return false;
+        if (maker && (maker === "-" ? r.maker !== "" : !labelsOfItem(r).includes(maker))) return false;
         if ($("priv").checked && !r.isPrivate) return false;
         if ($("withReview").checked && !r.review) return false;
         if ($("noDate").checked && r.playDate) return false;
@@ -464,13 +574,13 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       .sort(sorters[$("sort").value]);
     $("count").textContent = `${rows.length} / ${data.length} 件（取得 ${new Date().toLocaleTimeString("ja-JP")}）`;
     // スマホで絞り込みを畳んでいても、効いている条件の数が分かるようにする
-    const active = [result !== "", ...["priv", "withReview", "noDate", "noRating"].map((id) => $(id).checked)].filter(Boolean).length;
+    const active = [result !== "", maker !== "", ...["priv", "withReview", "noDate", "noRating"].map((id) => $(id).checked)].filter(Boolean).length;
     $("toggle").textContent = active ? `絞り込み(${active})` : "絞り込み";
     $("toggle").classList.toggle("on", active > 0);
     $("list").replaceChildren(...rows.map((r) => card(r, words)));
     markLong(words.length > 0);
   };
-  for (const id of ["q", "sort", "result", "priv", "withReview", "noDate", "noRating"]) $(id).addEventListener("input", render);
+  for (const id of ["q", "sort", "result", "maker", "priv", "withReview", "noDate", "noRating"]) $(id).addEventListener("input", render);
   // 幅640px以下（スマホ）では絞り込み条件を畳み、一覧を広く見せる。PCでは常に表示（ボタンも出ない）
   $("toggle").addEventListener("click", () => {
     const bar = root.querySelector(".bar");
