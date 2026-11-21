@@ -16,11 +16,19 @@
 @media (prefers-color-scheme:dark){.root{--bg:#15171b;--card:#1f2228;--text:#e8eaed;--sub:#9aa3b0;--line:#323741;--accent:#7aa7ff;--on:#10131a;--chip:#2a2e36;--check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.8 8.4l2.8 2.8 5.6-6.2' fill='none' stroke='%2310131a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}}
 .top{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--line)}
 .top h1{margin:0;font-size:18px}
-#close{min-height:48px;padding:0 22px;font-size:18px;font-weight:700;border:0;border-radius:10px;background:var(--accent);color:var(--on)}
-.topbtns{display:flex;align-items:center;gap:8px}
-#memoSet{min-height:40px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}
+.topbtns{display:flex;align-items:center;gap:4px}
+/* 上のバーのボタンは控えめなアイコンにし、青は保存などの操作だけに使う */
+.icon{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;font-size:20px;line-height:1;border:0;border-radius:50%;background:transparent;color:var(--text)}
+.icon[aria-expanded=true]{background:var(--chip)}
+@media (hover:hover){.icon:hover{background:var(--chip);filter:none}}
+.menuwrap{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 6px);z-index:5;min-width:230px;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.menu[hidden]{display:none}
+.menu-info{padding:6px 12px 8px;margin-bottom:4px;font-size:12px;color:var(--sub);border-bottom:1px solid var(--line)}
+.menu button{display:block;width:100%;padding:10px 12px;font-size:15px;text-align:left;border:0;border-radius:8px;background:none;color:var(--text)}
+@media (hover:hover){.menu button:hover{background:var(--chip);filter:none}}
 .wrap{max-width:820px;margin:0 auto;padding:0 12px 40px}
-.bar{position:sticky;top:69px;z-index:2;background:var(--bg);padding:10px 0 8px}
+.bar{position:sticky;top:61px;z-index:2;background:var(--bg);padding:10px 0 8px}
 .search{position:relative;display:flex;gap:8px}
 #qhint{position:absolute;left:0;top:calc(100% + 6px);z-index:4;max-width:100%;padding:6px 10px;border-radius:8px;background:#2b2f3a;color:#fff;font-size:12px;line-height:1.5;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none}
 #qhint[hidden]{display:none}
@@ -34,8 +42,7 @@
 @media (max-width:640px){
 .top{padding:4px 12px}
 .top h1{font-size:15px}
-#close{min-height:32px;padding:0 14px;font-size:14px;border-radius:8px}
-#memoSet{min-height:32px;padding:0 10px;font-size:13px;border-radius:8px}
+.icon{width:32px;height:32px;font-size:17px}
 .bar{top:41px;padding:6px 0}
 #q,#toggle{height:40px}
 #toggle{display:block}
@@ -58,7 +65,13 @@
 .chip:has(input:disabled){opacity:.45;cursor:not-allowed}
 .chip input:disabled{cursor:not-allowed}
 .chip[hidden]{display:none}
-#count{font-size:13px;color:var(--sub);margin:6px 2px 10px}
+.countrow{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:28px;margin:6px 2px 10px}
+#count{font-size:13px;color:var(--sub)}
+.clear{flex:none;height:28px;padding:0 12px;font-size:13px;font-weight:600;border:0;border-radius:14px;background:var(--chip);color:var(--accent)}
+.clear[hidden]{display:none}
+.empty{padding:40px 16px;text-align:center;color:var(--sub);font-size:15px}
+.empty p{margin:0 0 14px}
+.empty .clear{height:36px;padding:0 16px;font-size:14px;border-radius:18px;margin:0 4px}
 .card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
 .card h2{font-size:16px;line-height:1.4;margin:0 0 8px}
 .card h2 a{color:var(--accent);text-decoration:none}
@@ -96,7 +109,7 @@
 .review{margin-top:5px;font-size:14px;line-height:1.5}
 .card.long::after{right:10px;bottom:8px;line-height:21px}
 .edit-btn{height:26px;margin:-3px 0;padding:0 8px}
-#count{margin:4px 2px 6px}
+.countrow{margin:4px 2px 6px}
 }
 button,select,.chip{cursor:pointer}
 @media (hover:hover){button:hover{filter:brightness(.93)}}
@@ -123,15 +136,43 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 .edit .actions button{flex:1;height:46px;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text)}
 .edit .actions .save{background:var(--accent);color:var(--on);border:0;font-weight:700}
 .edit .actions .del{flex:none;padding:0 16px;color:#c0392b;border-color:#c0392b}
-#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:90%;padding:10px 16px;border-radius:10px;background:#222;color:#fff;font-size:14px;z-index:9}
+/* 確認・お知らせ・入力のシート。PCは中央、スマホは下から出す */
+.dlg-back{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(15,18,25,.45);animation:fade .15s}
+.dlg-back[hidden]{display:none}
+.dlg{width:min(460px,100%);max-height:calc(100% - 32px);overflow:auto;padding:20px;border-radius:16px;background:var(--card);color:var(--text);box-shadow:0 12px 40px rgba(0,0,0,.25);animation:pop .18s ease-out}
+.dlg h3{margin:0 0 10px;font-size:17px;line-height:1.4}
+.dlg .msg{margin:0;font-size:15px;line-height:1.6;white-space:pre-wrap}
+.dlg .rows{margin-top:6px}
+.dlg .row{display:grid;grid-template-columns:6.5em 1fr;gap:8px;padding:8px 0;font-size:14px;line-height:1.5;border-top:1px solid var(--line)}
+.dlg .row:last-child{border-bottom:1px solid var(--line)}
+.dlg .k{color:var(--sub)}
+.dlg .v{min-width:0;overflow-wrap:anywhere}
+.dlg .old{color:var(--sub);text-decoration:line-through}
+.dlg .new{font-weight:700}
+.dlg .warn{margin-top:12px;padding:8px 10px;border-radius:8px;background:#fff1dc;color:#8a5300;font-size:13px;line-height:1.5;white-space:pre-wrap}
+@media (prefers-color-scheme:dark){.dlg .warn{background:#3a2c14;color:#ffcf85}}
+.dlg input{width:100%;height:46px;margin-top:12px;padding:0 12px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text)}
+.dlg .acts{display:flex;gap:10px;margin-top:18px}
+.dlg .acts button{flex:1;height:46px;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text)}
+.dlg .acts .ok{border:0;background:var(--accent);color:var(--on);font-weight:700}
+.dlg .acts .ok.danger{background:#d93025;color:#fff}
+@media (max-width:640px){
+.dlg-back{align-items:flex-end;padding:0}
+.dlg{width:100%;max-height:85%;padding:18px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;animation:up .2s ease-out}
+}
+@keyframes fade{from{opacity:0}}
+@keyframes pop{from{opacity:0;transform:scale(.96)}}
+@keyframes up{from{transform:translateY(100%)}}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:90%;padding:10px 16px;border-radius:10px;background:#222;color:#fff;font-size:14px;z-index:30}
 mark{background:#ffe96b;color:#222;border-radius:2px}
 .loading{text-align:center;margin-top:30vh;font-size:16px;color:var(--sub)}
 .spin{width:40px;height:40px;margin:0 auto 14px;border:4px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:s 1s linear infinite}
 @keyframes s{to{transform:rotate(360deg)}}
 </style>
 <div class="root">
-<div class="top"><h1>自分のナゾ活</h1><div class="topbtns"><button id="memoSet" type="button">メモ設定</button><button id="close">✕ 閉じる</button></div></div>
+<div class="top"><h1>自分のナゾ活</h1><div class="topbtns"><div class="menuwrap"><button id="menuBtn" class="icon" type="button" aria-label="メニュー" aria-haspopup="true" aria-expanded="false">⋯</button><div id="menu" class="menu" hidden><div id="fetchedAt" class="menu-info">取得中…</div><button id="memoSet" type="button">メモの設定（トークン）</button></div></div><button id="close" class="icon" type="button" aria-label="閉じる" title="閉じる（Esc）">✕</button></div></div>
 <div id="main"><div class="loading"><div class="spin"></div>ナゾ活を取得中…</div></div>
+<div id="dlg" class="dlg-back" hidden></div>
 <div id="toast" hidden></div>
 </div>`;
   const $ = (id) => root.getElementById(id);
@@ -140,7 +181,84 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     document.body.style.overflow = "";
     document.removeEventListener("keydown", onKey);
   };
-  const onKey = (e) => e.key === "Escape" && close();
+  // Esc は、開いているシート → メニュー → ビューアの順に1つずつ閉じる
+  const onKey = (e) => {
+    if (e.key !== "Escape") return;
+    if (closeDialog) return closeDialog();
+    if (!$("menu").hidden) return setMenu(false);
+    close();
+  };
+  const setMenu = (open) => {
+    $("menu").hidden = !open;
+    $("menuBtn").setAttribute("aria-expanded", String(open));
+  };
+  $("menuBtn").addEventListener("click", () => setMenu($("menu").hidden));
+  root.addEventListener("click", (e) => {
+    if (!$("menu").hidden && !e.target.closest(".menuwrap")) setMenu(false);
+  });
+  // 確認・お知らせ・入力は、ブラウザ標準のダイアログ（スマホでは「ダイアログを止める」を押すと保存できなくなる）ではなく画面内のシートで出す。
+  // 戻り値: 確認は true/false、入力は文字列/null。changes は [[項目名, 前, 後]]
+  let closeDialog = null;
+  const dialog = ({ title, message = "", changes = [], warn = "", ok = "OK", cancel = "キャンセル", danger = false, input = null }) =>
+    new Promise((resolve) => {
+      const back = $("dlg");
+      const prevFocus = root.activeElement;
+      const el = (tag, cls, text) => {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text != null) e.textContent = text;
+        return e;
+      };
+      const box = el("div", "dlg");
+      box.setAttribute("role", "dialog");
+      box.setAttribute("aria-modal", "true");
+      if (title) box.append(el("h3", "", title));
+      if (message) box.append(el("p", "msg", message));
+      if (changes.length) {
+        const rows = el("div", "rows");
+        for (const [k, before, after] of changes) {
+          const v = el("div", "v");
+          v.append(el("span", "old", before), " → ", el("span", "new", after));
+          const row = el("div", "row");
+          row.append(el("span", "k", k), v);
+          rows.append(row);
+        }
+        box.append(rows);
+      }
+      if (warn) box.append(el("div", "warn", warn));
+      let field = null;
+      if (input) {
+        field = el("input");
+        Object.assign(field, { type: input.type ?? "text", placeholder: input.placeholder ?? "", autocomplete: "off", spellcheck: false });
+        box.append(field);
+      }
+      const acts = el("div", "acts");
+      const cancelBtn = cancel ? el("button", "cancel", cancel) : null;
+      const okBtn = el("button", danger ? "ok danger" : "ok", ok);
+      for (const b of [cancelBtn, okBtn]) {
+        if (!b) continue;
+        b.type = "button";
+        acts.append(b);
+      }
+      box.append(acts);
+      const done = (v) => {
+        back.hidden = true;
+        back.replaceChildren();
+        closeDialog = null;
+        prevFocus?.focus?.();
+        resolve(v);
+      };
+      closeDialog = () => done(input ? null : false);
+      okBtn.addEventListener("click", () => done(input ? field.value : true));
+      cancelBtn?.addEventListener("click", closeDialog);
+      back.onclick = (e) => e.target === back && closeDialog();
+      field?.addEventListener("keydown", (e) => e.key === "Enter" && !e.isComposing && okBtn.click());
+      back.replaceChildren(box);
+      back.hidden = false;
+      // 取り返しのつかない操作では、Enter で進まないよう「キャンセル」に合わせておく
+      (field ?? (danger ? cancelBtn : okBtn))?.focus();
+    });
+  const notify = (message, title = "") => dialog({ title, message, cancel: null });
   const fail = (msg) => {
     close();
     alert(msg);
@@ -188,6 +306,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     review: (r.review ?? "").replaceAll("\r\n", "\n"),
     photos: (r.allPhotoUrls ?? []).filter((u) => u?.includes("supabase.co/storage")),
   });
+  let fetchedAt = null;
   const fetchAll = async (auth) => {
     const all = [];
     for (let page = 1; ; page++) {
@@ -198,7 +317,10 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       const j = await res.json();
       all.push(...j.reviews);
       // APIは投稿日時の新しい順で返すため、取得順を投稿日順として使う
-      if (all.length >= j.count || j.reviews.length === 0) return all.map((r, seq) => ({ ...toItem(r), seq }));
+      if (all.length >= j.count || j.reviews.length === 0) {
+        fetchedAt = new Date();
+        return all.map((r, seq) => ({ ...toItem(r), seq }));
+      }
     }
   };
   // ナゾ活のAPIはレーベルを返さないため、作品のレーベルをナゾヒロバと同じ公開データ（Supabase）から引く。
@@ -300,7 +422,12 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     for (let attempt = 0; attempt < 3; attempt++) {
       const cur = await readMemos();
       if ((cur.memos[r.mysteryId]?.text ?? "") !== before && attempt === 0) {
-        if (!confirm("このメモは、開いた後に他の端末で更新されています。上書きしますか？")) return false;
+        const go = await dialog({
+          title: "他の端末で更新されています",
+          message: "このメモは、開いた後に他の端末で書き換えられています。今の内容で上書きしますか？",
+          ok: "上書きする",
+        });
+        if (!go) return false;
       }
       const next = { ...cur.memos };
       if (text.trim()) next[r.mysteryId] = { title: r.title, text, updatedAt: new Date().toISOString() };
@@ -367,7 +494,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     <label class="chip" id="memoOnlyChip" hidden><input id="memoOnly" type="checkbox">メモありのみ</label>
   </div>
 </div>
-<div id="count"></div>
+<div class="countrow"><div id="count"></div><button id="clear" class="clear" type="button" hidden>条件をクリア</button></div>
 <div id="list"></div>
 </div>`;
   const num = (s) => (s === "" ? -1 : Number(s));
@@ -422,10 +549,14 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       render();
       return toast("変更点がないため、何も更新していません");
     }
-    if (!next.playDate) return alert("参加日は空にできません");
-    const lines = changes.map(([k, label]) => `${label}: ${show(r[k])} → ${show(next[k])}`);
-    const warn = changes.some(([k]) => k === "isPrivate") ? "\n※公開範囲が変わります" : "";
-    if (!confirm(`「${r.title}」のナゾ活を更新します\n\n${lines.join("\n")}${warn}\n\nよろしいですか？`)) return;
+    if (!next.playDate) return notify("参加日は空にできません");
+    const go = await dialog({
+      title: `「${r.title}」を更新します`,
+      changes: changes.map(([k, label]) => [label, show(r[k]), show(next[k])]),
+      warn: changes.some(([k]) => k === "isPrivate") ? (next.isPrivate ? "非公開になります" : "公開されます（他の人から見えるようになります）") : "",
+      ok: "保存する",
+    });
+    if (!go) return;
     setBusy(true, "保存中…");
     const startedAt = Date.now();
     const auth = await getAuth();
@@ -445,15 +576,20 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, 800 - (Date.now() - startedAt))));
     editingId = null;
     render();
-    if (bad.length) alert(`更新後の値が期待と違います: ${bad.map(([, l]) => l).join("、")}`);
+    if (bad.length) notify(`更新後の値が期待と違います: ${bad.map(([, l]) => l).join("、")}`, "確認してください");
     else toast(`更新しました（${changes.map(([, l]) => l).join("、")}）`);
   };
   // サイト本体と同じ DELETE /api/v2/reviews/{id}。成功後に取得し直して消えたことを確かめる
   const remove = async (r, setBusy) => {
-    const lines = [`「${r.title}」のナゾ活を削除します`, r.playDate && `参加日: ${r.playDate}`];
-    if (!r.isPrivate) lines.push("※公開中のナゾ活です");
-    if (r.photos.length) lines.push(`添付写真${r.photos.length}枚も削除されます`);
-    if (!confirm(`${lines.filter(Boolean).join("\n")}\n\n元に戻せません。よろしいですか？`)) return;
+    const notes = [!r.isPrivate && "公開中のナゾ活です", r.photos.length && `添付写真${r.photos.length}枚も削除されます`, "元に戻せません"];
+    const go = await dialog({
+      title: `「${r.title}」を削除しますか？`,
+      message: r.playDate ? `参加日: ${r.playDate}` : "",
+      warn: notes.filter(Boolean).join("\n"),
+      ok: "削除する",
+      danger: true,
+    });
+    if (!go) return;
     setBusy(true, "削除中…");
     const startedAt = Date.now();
     const auth = await getAuth();
@@ -479,8 +615,8 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, 800 - (Date.now() - startedAt))));
     editingId = null;
     render();
-    if (data.some((x) => x.id === r.id)) alert("削除後も一覧に残っています。ページを再読み込みして確認してください");
-    else if (photoFailed) alert(`ナゾ活は削除しましたが、写真${photoFailed}枚の削除に失敗しました`);
+    if (data.some((x) => x.id === r.id)) notify("削除後も一覧に残っています。ページを再読み込みして確認してください", "確認してください");
+    else if (photoFailed) notify(`ナゾ活は削除しましたが、写真${photoFailed}枚の削除に失敗しました`, "確認してください");
     else toast(`「${r.title}」を削除しました`);
   };
   const options = (list, current) => {
@@ -528,7 +664,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       try {
         await remove(r, (on, text) => setBusy(on, text, false));
       } catch (err) {
-        alert(err.message);
+        notify(err.message, "エラー");
       } finally {
         setBusy(false);
       }
@@ -547,7 +683,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
           review: f.review.value.replaceAll("\r\n", "\n"),
         }, setBusy);
       } catch (err) {
-        alert(err.message);
+        notify(err.message, "エラー");
       } finally {
         setBusy(false);
       }
@@ -594,7 +730,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
         render();
         toast(text.trim() ? "メモを保存しました" : "メモを消しました");
       } catch (err) {
-        alert(err.message);
+        notify(err.message, "エラー");
       } finally {
         setBusy(false);
       }
@@ -814,6 +950,16 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       localStorage.setItem(AND_USED_KEY, "1");
     } catch {}
   };
+  // 「条件をクリア」で戻すもの。並び替えと検索欄はそのまま
+  const FILTER_CHECKS = ["onsite", "priv", "withReview", "noDate", "noRating", "memoOnly"];
+  const activeChecks = () => FILTER_CHECKS.filter((id) => $(id).checked && (id !== "memoOnly" || memoState === "ok"));
+  const clearFilters = () => {
+    $("result").value = "";
+    $("maker").value = "";
+    pickedMain = "";
+    for (const id of FILTER_CHECKS) $(id).checked = false;
+    render();
+  };
   const render = () => {
     fillMakers();
     const words = $("q").value.trim().split(/\s+/).filter(Boolean);
@@ -841,40 +987,67 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     $("count").textContent =
       words.length > 1
         ? `${words.map((w) => `「${w}」`).join("")}をすべて含む ${rows.length} / ${data.length} 件`
-        : `${rows.length} / ${data.length} 件（取得 ${new Date().toLocaleTimeString("ja-JP")}）`;
+        : `${rows.length} / ${data.length} 件`;
+    $("fetchedAt").textContent = fetchedAt ? `${fetchedAt.toLocaleTimeString("ja-JP")} に取得（${data.length}件）` : "";
     if (words.length > 1) rememberAndUsed();
     // スマホで絞り込みを畳んでいても、効いている条件の数が分かるようにする
     $("memoOnlyChip").hidden = memoState !== "ok";
-    const active = [
-      result !== "",
-      maker !== "",
-      ...["onsite", "priv", "withReview", "noDate", "noRating"].map((id) => $(id).checked),
-      memoState === "ok" && $("memoOnly").checked,
-    ].filter(Boolean).length;
+    const active = [result !== "", maker !== ""].filter(Boolean).length + activeChecks().length;
+    $("clear").hidden = active === 0;
     $("toggle").textContent = active ? `絞り込み(${active})` : "絞り込み";
     $("toggle").classList.toggle("on", active > 0);
-    $("list").replaceChildren(...rows.map((r) => card(r, words)));
+    if (rows.length) $("list").replaceChildren(...rows.map((r) => card(r, words)));
+    else {
+      // 0件のときは、何も出ないのではなく理由と戻し方を出す
+      const box = document.createElement("div");
+      box.className = "empty";
+      const p = document.createElement("p");
+      p.textContent = data.length ? "条件に合うナゾ活はありません" : "ナゾ活がまだありません";
+      box.append(p);
+      const btn = (text, onClick) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "clear";
+        b.textContent = text;
+        b.addEventListener("click", onClick);
+        box.append(b);
+      };
+      if (active) btn("条件をクリア", clearFilters);
+      if (words.length) {
+        btn("検索を消す", () => {
+          $("q").value = "";
+          render();
+        });
+      }
+      $("list").replaceChildren(box);
+    }
     markLong(words.length > 0);
   };
-  for (const id of ["q", "sort", "result", "onsite", "priv", "withReview", "noDate", "noRating", "memoOnly"]) $(id).addEventListener("input", render);
+  for (const id of ["q", "sort", "result", ...FILTER_CHECKS]) $(id).addEventListener("input", render);
+  $("clear").addEventListener("click", clearFilters);
   // メモ用のトークンを端末ごとに入れる。空にすると消す。入れたら読み直して一覧に反映する
   $("memoSet").addEventListener("click", async () => {
+    setMenu(false);
     const has = !!memoToken();
-    const input = prompt(
-      `${has ? "メモ用のトークンは設定済みです。入れ直すときは貼ってください。空にしてOKを押すと、この端末から消します。" : "メモ用のGitHubトークン（nazokatsu-memos だけを読み書きできる fine-grained トークン）を貼ってください。"}`,
-      "",
-    );
+    const input = await dialog({
+      title: "メモの設定",
+      message: has
+        ? "トークンは設定済みです。入れ直すときは貼ってください。空のまま保存すると、この端末から消します。"
+        : "nazokatsu-memos だけを読み書きできる GitHub の fine-grained トークンを貼ってください。",
+      input: { type: "password", placeholder: "github_pat_…" },
+      ok: "保存",
+    });
     if (input === null) return;
     try {
       if (input.trim()) localStorage.setItem(MEMO_TOKEN_KEY, input.trim());
       else localStorage.removeItem(MEMO_TOKEN_KEY);
     } catch {
-      return alert("この端末ではトークンを保存できません（ブラウザの保存が無効になっています）");
+      return notify("この端末ではトークンを保存できません（ブラウザの保存が無効になっています）");
     }
     memoEditingId = null;
     await loadMemos();
     render();
-    if (memoProblem) alert(memoProblem);
+    if (memoProblem) notify(memoProblem, "メモを読み込めません");
     else toast(memoState === "ok" ? `メモを読み込みました（${Object.keys(memos).length}件）` : "この端末からトークンを消しました");
   });
   // ボタンとセレクトボックスはどちらか一方だけ効かせる。押し中のボタンをもう一度押すと解除
