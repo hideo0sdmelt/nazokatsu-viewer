@@ -17,6 +17,8 @@
 .top{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--line)}
 .top h1{margin:0;font-size:18px}
 #close{min-height:48px;padding:0 22px;font-size:18px;font-weight:700;border:0;border-radius:10px;background:var(--accent);color:var(--on)}
+.topbtns{display:flex;align-items:center;gap:8px}
+#memoSet{min-height:40px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text)}
 .wrap{max-width:820px;margin:0 auto;padding:0 12px 40px}
 .bar{position:sticky;top:69px;z-index:2;background:var(--bg);padding:10px 0 8px}
 .search{position:relative;display:flex;gap:8px}
@@ -33,6 +35,7 @@
 .top{padding:4px 12px}
 .top h1{font-size:15px}
 #close{min-height:32px;padding:0 14px;font-size:14px;border-radius:8px}
+#memoSet{min-height:32px;padding:0 10px;font-size:13px;border-radius:8px}
 .bar{top:41px;padding:6px 0}
 #q,#toggle{height:40px}
 #toggle{display:block}
@@ -46,6 +49,7 @@
 .seg button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on);font-weight:700}
 .seg button span{margin-left:4px;font-size:12px;opacity:.75}
 .chip{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card)}
+.chip[hidden]{display:none}
 #count{font-size:13px;color:var(--sub);margin:6px 2px 10px}
 .card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
 .card h2{font-size:16px;line-height:1.4;margin:0 0 8px}
@@ -60,6 +64,18 @@
 .tag.spoil{background:#ffe9cc;color:#9a5a00}
 .review{white-space:pre-wrap;margin:10px 0 0;font-size:15px;line-height:1.6;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .card.open .review{display:block;-webkit-line-clamp:unset}
+.memo{margin:10px 0 0;padding:6px 10px;border-left:3px solid #4b3a9a;border-radius:4px;background:var(--chip)}
+.memo-label{font-size:12px;font-weight:700;color:#4b3a9a}
+@media (prefers-color-scheme:dark){.memo{border-left-color:#a99cf0}.memo-label{color:#a99cf0}}
+.memo-text{white-space:pre-wrap;margin:2px 0 0;font-size:15px;line-height:1.6;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.card.open .memo-text{display:block;-webkit-line-clamp:unset}
+.btns{flex:none;display:flex;gap:6px}
+.memo-edit{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.memo-edit textarea{min-height:160px;font-size:16px;line-height:1.5;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
+.memo-edit .note{font-size:12px;color:var(--sub)}
+.memo-edit .actions{display:flex;gap:10px}
+.memo-edit .actions button{flex:1;height:46px;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text)}
+.memo-edit .actions .save{background:var(--accent);color:var(--on);border:0;font-weight:700}
 .card.long{cursor:pointer}
 .card.long::after{content:"…続き ▾";position:absolute;right:14px;bottom:12px;padding-left:36px;font-size:12px;line-height:24px;color:var(--sub);background:linear-gradient(to right,transparent,var(--card) 32px)}
 .card.long.open::after{content:"たたむ ▴";position:static;display:block;padding:0;text-align:right;line-height:1.6;background:none}
@@ -102,7 +118,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
 @keyframes s{to{transform:rotate(360deg)}}
 </style>
 <div class="root">
-<div class="top"><h1>自分のナゾ活</h1><button id="close">✕ 閉じる</button></div>
+<div class="top"><h1>自分のナゾ活</h1><div class="topbtns"><button id="memoSet" type="button">メモ設定</button><button id="close">✕ 閉じる</button></div></div>
 <div id="main"><div class="loading"><div class="spin"></div>ナゾ活を取得中…</div></div>
 <div id="toast" hidden></div>
 </div>`;
@@ -203,6 +219,93 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       r.onsite = onsiteOf.get(r.mysteryId);
     }
   };
+  // 解読した暗号などの自分用メモ。ナゾヒロバには送らず、非公開リポジトリの memos.json（作品ID → { title, text, updatedAt }）に置いて
+  // PCとスマホで共有する。トークンはそのリポジトリだけを読み書きできる fine-grained PAT にし、端末ごとに localStorage に置く
+  // （ナゾヒロバのページ上の他のスクリプトからも読めるため、権限は必ずメモ用リポジトリだけに絞る）
+  const MEMO_API = "https://api.github.com/repos/hideo0sdmelt/nazokatsu-memos/contents/memos.json";
+  const MEMO_TOKEN_KEY = "nazokatsuMemoToken";
+  const memoToken = () => {
+    try {
+      return localStorage.getItem(MEMO_TOKEN_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  };
+  let memos = {};
+  // off: トークン未設定 / ok: 読めた / error: 読めなかった（メモ欄は出さない）
+  let memoState = "off";
+  let memoProblem = "";
+  const b64decode = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, "")), (c) => c.charCodeAt(0)));
+  const b64encode = (s) => {
+    const bytes = new TextEncoder().encode(s);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  };
+  const memoFetch = (method, body) =>
+    fetch(MEMO_API, {
+      method,
+      cache: "no-store",
+      headers: {
+        authorization: `Bearer ${memoToken()}`,
+        accept: "application/vnd.github+json",
+        ...(body ? { "content-type": "application/json" } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  const memoError = (res, what) =>
+    new Error(
+      res.status === 401
+        ? "メモのトークンが無効か期限切れです。「メモ設定」で入れ直してください"
+        : res.status === 403 || res.status === 404
+          ? `メモの${what}に失敗しました（${res.status}）。トークンの対象リポジトリと権限（Contents: Read and write）を確かめてください`
+          : `メモの${what}に失敗しました（${res.status}）`,
+    );
+  // 保存の直前にも読み直し、他の端末で書いた別の作品のメモを消さないようにする（sha で衝突を検出する）
+  const readMemos = async () => {
+    const res = await memoFetch("GET");
+    // ファイルがまだ無いとき。トークンがリポジトリを見られないときも404になるが、保存時のエラーで気づける
+    if (res.status === 404) return { memos: {}, sha: null };
+    if (!res.ok) throw memoError(res, "取得");
+    const j = await res.json();
+    return { memos: JSON.parse(b64decode(j.content ?? "") || "{}"), sha: j.sha };
+  };
+  const loadMemos = async () => {
+    memos = {};
+    memoProblem = "";
+    if (!memoToken()) return (memoState = "off");
+    try {
+      memos = (await readMemos()).memos;
+      memoState = "ok";
+    } catch (e) {
+      memoState = "error";
+      memoProblem = e.message;
+    }
+  };
+  const saveMemo = async (r, before, text) => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const cur = await readMemos();
+      if ((cur.memos[r.mysteryId]?.text ?? "") !== before && attempt === 0) {
+        if (!confirm("このメモは、開いた後に他の端末で更新されています。上書きしますか？")) return false;
+      }
+      const next = { ...cur.memos };
+      if (text.trim()) next[r.mysteryId] = { title: r.title, text, updatedAt: new Date().toISOString() };
+      else delete next[r.mysteryId];
+      const res = await memoFetch("PUT", {
+        message: `${text.trim() ? "メモを更新" : "メモを削除"}: ${r.title}`,
+        content: b64encode(`${JSON.stringify(next, null, 2)}\n`),
+        ...(cur.sha ? { sha: cur.sha } : {}),
+      });
+      if (res.ok) {
+        memos = next;
+        return true;
+      }
+      // 409/422: 読んでから書くまでの間に他の端末が保存した。読み直してやり直す
+      if (res.status !== 409 && res.status !== 422) throw memoError(res, "保存");
+    }
+    throw new Error("他の端末の保存と重なりました。もう一度保存してください");
+  };
+
   let data;
   try {
     data = await fetchAll(await getAuth());
@@ -214,6 +317,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   } catch (e) {
     console.warn(e);
   }
+  await loadMemos();
   if (!host.isConnected) return;
 
   $("main").innerHTML = `<div class="wrap">
@@ -246,6 +350,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     <label class="chip"><input id="withReview" type="checkbox">感想ありのみ</label>
     <label class="chip"><input id="noDate" type="checkbox">参加日なしのみ</label>
     <label class="chip"><input id="noRating" type="checkbox">満足度・難易度・時間の未入力ありのみ</label>
+    <label class="chip" id="memoOnlyChip" hidden><input id="memoOnly" type="checkbox">メモありのみ</label>
   </div>
 </div>
 <div id="count"></div>
@@ -440,8 +545,56 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     el.append(h, form);
     return el;
   };
+  let memoEditingId = null;
+  const memoOf = (r) => (memoState === "ok" ? memos[r.mysteryId]?.text ?? "" : "");
+  const memoCard = (r) => {
+    const el = document.createElement("article");
+    el.className = "card editing";
+    const h = document.createElement("h2");
+    h.textContent = `メモ: ${r.title}`;
+    const form = document.createElement("form");
+    form.className = "memo-edit";
+    form.innerHTML = `<textarea name="memo" placeholder="解読した暗号など。自分だけが見られます"></textarea>
+<div class="note">ナゾヒロバには送られません。空にして保存するとメモを消します</div>
+<div class="actions"><button type="submit" class="save">保存</button><button type="button" class="cancel">キャンセル</button></div>
+<div class="saving" hidden><div class="spin"></div><span>保存中…</span></div>`;
+    const before = memoOf(r);
+    form.elements.memo.value = before;
+    const overlay = form.querySelector(".saving");
+    const setBusy = (on) => {
+      for (const c of form.querySelectorAll("textarea,button")) c.disabled = on;
+      overlay.hidden = !on;
+    };
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = form.elements.memo.value.replaceAll("\r\n", "\n");
+      if (text === before) {
+        memoEditingId = null;
+        render();
+        return toast("変更点がないため、何も保存していません");
+      }
+      setBusy(true);
+      try {
+        if (!(await saveMemo(r, before, text))) return;
+        memoEditingId = null;
+        render();
+        toast(text.trim() ? "メモを保存しました" : "メモを消しました");
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        setBusy(false);
+      }
+    });
+    form.querySelector(".cancel").addEventListener("click", () => {
+      memoEditingId = null;
+      render();
+    });
+    el.append(h, form);
+    return el;
+  };
   const card = (r, words) => {
     if (r.id === editingId) return editCard(r);
+    if (r.id === memoEditingId) return memoCard(r);
     const el = document.createElement("article");
     el.className = "card";
     const head = document.createElement("div");
@@ -459,10 +612,27 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     editBtn.textContent = "編集";
     editBtn.addEventListener("click", () => {
       editingId = r.id;
+      memoEditingId = null;
       render();
       $("list").querySelector(".editing")?.scrollIntoView({ block: "nearest" });
     });
-    head.append(h, editBtn);
+    const btns = document.createElement("div");
+    btns.className = "btns";
+    if (memoState === "ok" && r.mysteryId) {
+      const memoBtn = document.createElement("button");
+      memoBtn.type = "button";
+      memoBtn.className = "edit-btn memo-btn";
+      memoBtn.textContent = "メモ";
+      memoBtn.addEventListener("click", () => {
+        memoEditingId = r.id;
+        editingId = null;
+        render();
+        $("list").querySelector(".editing")?.scrollIntoView({ block: "nearest" });
+      });
+      btns.append(memoBtn);
+    }
+    btns.append(editBtn);
+    head.append(h, btns);
     const meta = document.createElement("div");
     meta.className = "meta";
     const tag = (text, cls = "") => {
@@ -485,7 +655,22 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       p.className = "review";
       highlight(p, r.review, words);
       el.append(p);
-      // 長いかどうか（.long）は表示後に markLong で実際に2行に収まらないかを測って決める
+    }
+    const memo = memoOf(r);
+    if (memo) {
+      const box = document.createElement("div");
+      box.className = "memo";
+      const label = document.createElement("div");
+      label.className = "memo-label";
+      label.textContent = "自分用メモ";
+      const p = document.createElement("p");
+      p.className = "memo-text";
+      highlight(p, memo, words);
+      box.append(label, p);
+      el.append(box);
+    }
+    // 長いかどうか（.long）は表示後に markLong で実際に2行に収まらないかを測って決める
+    if (r.review || memo) {
       el.addEventListener("click", (e) => {
         if (el.classList.contains("long") && !e.target.closest("a, button")) el.classList.toggle("open");
       });
@@ -496,11 +681,11 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   // openAll（検索中）はヒット箇所が隠れないよう、切れるカードを最初から開く
   const markLong = (openAll) => {
     for (const el of $("list").querySelectorAll(".card")) {
-      const p = el.querySelector(".review");
-      if (!p) continue;
+      const ps = [...el.querySelectorAll(".review, .memo-text")];
+      if (!ps.length) continue;
       const wasOpen = el.classList.contains("open");
       el.classList.remove("open");
-      const long = p.scrollHeight > p.clientHeight + 1;
+      const long = ps.some((p) => p.scrollHeight > p.clientHeight + 1);
       el.classList.toggle("long", long);
       if (long && (wasOpen || openAll)) el.classList.add("open");
     }
@@ -624,7 +809,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     const onsiteOnly = $("onsite").checked;
     const rows = data
       .filter((r) => {
-        const hay = `${r.title}\n${r.maker}\n${labelsOfItem(r).join("\n")}\n${r.review}`.toLowerCase();
+        const hay = `${r.title}\n${r.maker}\n${labelsOfItem(r).join("\n")}\n${r.review}\n${memoOf(r)}`.toLowerCase();
         if (!lower.every((w) => hay.includes(w))) return false;
         if (result === "-" ? r.result !== "" : result && r.result !== result) return false;
         if (maker && (maker === "-" ? r.maker !== "" : !labelsOfItem(r).includes(maker))) return false;
@@ -633,6 +818,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
         if ($("withReview").checked && !r.review) return false;
         if ($("noDate").checked && r.playDate) return false;
         if ($("noRating").checked && r.satisfaction !== "" && r.difficulty !== "" && r.minutes !== "") return false;
+        if (memoState === "ok" && $("memoOnly").checked && !memoOf(r)) return false;
         return true;
       })
       .sort(sorters[$("sort").value]);
@@ -644,13 +830,39 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
         : `${rows.length} / ${data.length} 件（取得 ${new Date().toLocaleTimeString("ja-JP")}）`;
     if (words.length > 1) rememberAndUsed();
     // スマホで絞り込みを畳んでいても、効いている条件の数が分かるようにする
-    const active = [result !== "", maker !== "", ...["onsite", "priv", "withReview", "noDate", "noRating"].map((id) => $(id).checked)].filter(Boolean).length;
+    $("memoOnlyChip").hidden = memoState !== "ok";
+    const active = [
+      result !== "",
+      maker !== "",
+      ...["onsite", "priv", "withReview", "noDate", "noRating"].map((id) => $(id).checked),
+      memoState === "ok" && $("memoOnly").checked,
+    ].filter(Boolean).length;
     $("toggle").textContent = active ? `絞り込み(${active})` : "絞り込み";
     $("toggle").classList.toggle("on", active > 0);
     $("list").replaceChildren(...rows.map((r) => card(r, words)));
     markLong(words.length > 0);
   };
-  for (const id of ["q", "sort", "result", "onsite", "priv", "withReview", "noDate", "noRating"]) $(id).addEventListener("input", render);
+  for (const id of ["q", "sort", "result", "onsite", "priv", "withReview", "noDate", "noRating", "memoOnly"]) $(id).addEventListener("input", render);
+  // メモ用のトークンを端末ごとに入れる。空にすると消す。入れたら読み直して一覧に反映する
+  $("memoSet").addEventListener("click", async () => {
+    const has = !!memoToken();
+    const input = prompt(
+      `${has ? "メモ用のトークンは設定済みです。入れ直すときは貼ってください。空にしてOKを押すと、この端末から消します。" : "メモ用のGitHubトークン（nazokatsu-memos だけを読み書きできる fine-grained トークン）を貼ってください。"}`,
+      "",
+    );
+    if (input === null) return;
+    try {
+      if (input.trim()) localStorage.setItem(MEMO_TOKEN_KEY, input.trim());
+      else localStorage.removeItem(MEMO_TOKEN_KEY);
+    } catch {
+      return alert("この端末ではトークンを保存できません（ブラウザの保存が無効になっています）");
+    }
+    memoEditingId = null;
+    await loadMemos();
+    render();
+    if (memoProblem) alert(memoProblem);
+    else toast(memoState === "ok" ? `メモを読み込みました（${Object.keys(memos).length}件）` : "この端末からトークンを消しました");
+  });
   // ボタンとセレクトボックスはどちらか一方だけ効かせる。押し中のボタンをもう一度押すと解除
   $("maker").addEventListener("input", () => {
     pickedMain = "";
@@ -676,4 +888,5 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     $("toggle").setAttribute("aria-expanded", String(bar.classList.contains("show")));
   });
   render();
+  if (memoProblem) toast(memoProblem);
 })().catch((e) => alert("エラー: " + e.message));
