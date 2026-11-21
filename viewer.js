@@ -40,6 +40,11 @@
 .bar.show .filters{display:flex}
 }
 .filters select{height:38px;font-size:14px;padding:0 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg[hidden]{display:none}
+.seg button{height:38px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text)}
+.seg button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on);font-weight:700}
+.seg button span{margin-left:4px;font-size:12px;opacity:.75}
 .chip{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card)}
 #count{font-size:13px;color:var(--sub);margin:6px 2px 10px}
 .card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
@@ -137,11 +142,14 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   };
   // 作品ID → レーベル（ナゾヒロバの作品の maker 欄）。編集後に取り直したときも使えるよう取得結果を残しておく
   const makers = new Map();
+  // 作品ID → 公演型か（WEB・アプリ・持ち帰り・本だけでなく、会場や街に出向くものか）。取れなかった作品は入れない
+  const onsiteOf = new Map();
   const toItem = (r) => ({
     id: r.id,
     mysteryId: r.mysteryId ?? "",
     title: r.mysteryTitle ?? "",
     maker: makers.get(r.mysteryId) ?? "",
+    onsite: onsiteOf.get(r.mysteryId),
     playDate: (r.playDate ?? "").slice(0, 10),
     satisfaction: r.satisfactionRating ?? "",
     difficulty: r.difficultyRating ?? "",
@@ -170,17 +178,29 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   const SUPABASE_URL = "https://prtwipndhcaxbuumlzgg.supabase.co";
   const SUPABASE_ANON_KEY =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBydHdpcG5kaGNheGJ1dW1semdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDQ3NzE0MDAsImV4cCI6MjAyMDM0NzQwMH0.HomCCnxEoeL6r7E2U3k2vp3hy3PNAuqsGsTMdNHEtqM";
+  // ナゾヒロバの作品の分類（categories 欄）のうち、出向いて遊ぶもの。
+  // 01・02 周遊型、03 ルーム型、04・05 公演・イベント型、06 テーマパーク等、07 カフェ・バー、10 宝探し、14 マダミス、18 イマーシブ。
+  // 08 オンライン・LINE、09 アプリ、11 持ち帰り、13 本は含めない。16・17 はどちらにも付くので判定に使わない。
+  // 「オンライン＋公演」のように両方付く作品は公演型とみなす
+  const ONSITE_CODES = new Set(["01", "02", "03", "04", "05", "06", "07", "10", "14", "18"]);
   const loadMakers = async (items) => {
     const ids = [...new Set(items.map((r) => r.mysteryId).filter((id) => id && !makers.has(id)))];
     for (let i = 0; i < ids.length; i += 100) {
-      const params = new URLSearchParams({ select: "id,maker", id: `in.(${ids.slice(i, i + 100).map((id) => `"${id}"`).join(",")})` });
+      const params = new URLSearchParams({ select: "id,maker,categories", id: `in.(${ids.slice(i, i + 100).map((id) => `"${id}"`).join(",")})` });
       const res = await fetch(`${SUPABASE_URL}/rest/v1/mysteries?${params}`, {
         headers: { apikey: SUPABASE_ANON_KEY, authorization: `Bearer ${SUPABASE_ANON_KEY}` },
       });
       if (!res.ok) throw new Error(`レーベルの取得に失敗しました（${res.status}）`);
-      for (const m of await res.json()) makers.set(m.id, (m.maker ?? "").trim());
+      for (const m of await res.json()) {
+        makers.set(m.id, (m.maker ?? "").trim());
+        const codes = (m.categories ?? "").split(",").filter(Boolean);
+        if (codes.length) onsiteOf.set(m.id, codes.some((c) => ONSITE_CODES.has(c)));
+      }
     }
-    for (const r of items) r.maker = makers.get(r.mysteryId) ?? "";
+    for (const r of items) {
+      r.maker = makers.get(r.mysteryId) ?? "";
+      r.onsite = onsiteOf.get(r.mysteryId);
+    }
   };
   let data;
   try {
@@ -218,7 +238,9 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       <option value="失敗">失敗</option>
       <option value="-">未設定</option>
     </select>
+    <div id="mainMakers" class="seg"></div>
     <select id="maker"></select>
+    <label class="chip"><input id="onsite" type="checkbox">公演型のみ</label>
     <label class="chip"><input id="priv" type="checkbox">非公開のみ</label>
     <label class="chip"><input id="withReview" type="checkbox">感想ありのみ</label>
     <label class="chip"><input id="noDate" type="checkbox">参加日なしのみ</label>
@@ -544,16 +566,38 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   };
   const labelsOfItem = (r) => labelsOf.get(r.maker) ?? [];
   // レーベルの選択肢は件数の多い順で「不明」は最後。編集・削除で件数が変わるので描画のたびに作り直し、選択は保つ
+  // 件数の多い4つのレーベルはボタンで選べるようにし、残りをセレクトボックスに入れる。
+  // ボタンの顔ぶれは開いたときに決めて固定する（編集で件数が入れ替わってもボタンが動かないように）
+  let mainMakers = null;
+  let pickedMain = "";
   const fillMakers = () => {
     buildLabels();
     const sel = $("maker");
     const current = sel.value;
     const counts = new Map();
     for (const r of data) for (const m of r.maker ? labelsOfItem(r) : [""]) counts.set(m, (counts.get(m) ?? 0) + 1);
-    const opts = [...counts]
-      .sort((a, b) => !a[0] - !b[0] || b[1] - a[1] || a[0].localeCompare(b[0], "ja"))
+    const sorted = [...counts].sort((a, b) => !a[0] - !b[0] || b[1] - a[1] || a[0].localeCompare(b[0], "ja"));
+    mainMakers ??= sorted.filter(([m]) => m).slice(0, 4).map(([m]) => m);
+    $("mainMakers").replaceChildren(
+      ...mainMakers.map((m) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.dataset.maker = m;
+        b.setAttribute("aria-pressed", String(pickedMain === m));
+        b.append(m);
+        const n = document.createElement("span");
+        n.textContent = counts.get(m) ?? 0;
+        b.append(n);
+        return b;
+      }),
+    );
+    $("mainMakers").hidden = mainMakers.length === 0;
+    // 分類を取れなかったとき（Supabase の失敗など）は、全部消えてしまうので公演型の絞り込みを使えなくする
+    $("onsite").disabled = onsiteOf.size === 0;
+    const opts = sorted
+      .filter(([m]) => !mainMakers.includes(m))
       .map(([m, n]) => new Option(`${m || "不明"}（${n}）`, m || "-"));
-    sel.replaceChildren(new Option("レーベル: すべて", ""), ...opts);
+    sel.replaceChildren(new Option(mainMakers.length ? "その他のレーベル" : "レーベル: すべて", ""), ...opts);
     sel.value = [...sel.options].some((o) => o.value === current) ? current : "";
   };
   // 2語以上で検索したことがあるか。ナゾヒロバのページの localStorage に1件だけ残す（使えなければ毎回出す）
@@ -575,13 +619,15 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     const words = $("q").value.trim().split(/\s+/).filter(Boolean);
     const lower = words.map((w) => w.toLowerCase());
     const result = $("result").value;
-    const maker = $("maker").value;
+    const maker = pickedMain || $("maker").value;
+    const onsiteOnly = $("onsite").checked;
     const rows = data
       .filter((r) => {
         const hay = `${r.title}\n${r.maker}\n${labelsOfItem(r).join("\n")}\n${r.review}`.toLowerCase();
         if (!lower.every((w) => hay.includes(w))) return false;
         if (result === "-" ? r.result !== "" : result && r.result !== result) return false;
         if (maker && (maker === "-" ? r.maker !== "" : !labelsOfItem(r).includes(maker))) return false;
+        if (onsiteOnly && r.onsite !== true) return false;
         if ($("priv").checked && !r.isPrivate) return false;
         if ($("withReview").checked && !r.review) return false;
         if ($("noDate").checked && r.playDate) return false;
@@ -597,13 +643,25 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
         : `${rows.length} / ${data.length} 件（取得 ${new Date().toLocaleTimeString("ja-JP")}）`;
     if (words.length > 1) rememberAndUsed();
     // スマホで絞り込みを畳んでいても、効いている条件の数が分かるようにする
-    const active = [result !== "", maker !== "", ...["priv", "withReview", "noDate", "noRating"].map((id) => $(id).checked)].filter(Boolean).length;
+    const active = [result !== "", maker !== "", ...["onsite", "priv", "withReview", "noDate", "noRating"].map((id) => $(id).checked)].filter(Boolean).length;
     $("toggle").textContent = active ? `絞り込み(${active})` : "絞り込み";
     $("toggle").classList.toggle("on", active > 0);
     $("list").replaceChildren(...rows.map((r) => card(r, words)));
     markLong(words.length > 0);
   };
-  for (const id of ["q", "sort", "result", "maker", "priv", "withReview", "noDate", "noRating"]) $(id).addEventListener("input", render);
+  for (const id of ["q", "sort", "result", "onsite", "priv", "withReview", "noDate", "noRating"]) $(id).addEventListener("input", render);
+  // ボタンとセレクトボックスはどちらか一方だけ効かせる。押し中のボタンをもう一度押すと解除
+  $("maker").addEventListener("input", () => {
+    pickedMain = "";
+    render();
+  });
+  $("mainMakers").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    pickedMain = pickedMain === b.dataset.maker ? "" : b.dataset.maker;
+    $("maker").value = "";
+    render();
+  });
   // 検索欄が空のまま選ばれているときだけ、スペース区切りで絞り込めることを吹き出しで出す。
   // 打ち始めるか欄から離れると消える。一度2語以上で検索したら、知っているとみなして出さない
   const syncHint = () => {
