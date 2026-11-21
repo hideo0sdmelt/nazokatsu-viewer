@@ -84,6 +84,7 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 .edit input[type=date],.edit select,.edit textarea{font-size:16px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
 .edit label.chk{flex-direction:row;align-items:center;gap:8px;font-size:15px;color:var(--text)}
 .edit .wide{grid-column:1/-1}
+.edit .chks{grid-column:1/-1;display:flex;gap:24px}
 .edit textarea{min-height:160px;line-height:1.5}
 .edit .actions{grid-column:1/-1;display:flex;gap:10px}
 .edit .actions button{flex:1;height:46px;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text)}
@@ -359,8 +360,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
 <label>難易度<select name="difficulty">${options([unset, ...[1, 2, 3, 4, 5].map((n) => [n, n])], r.difficulty)}</select></label>
 <label>プレイ時間<select name="minutes">${options([unset, ...Array.from({ length: 48 }, (_, i) => [15 * (i + 1), minuteLabel(15 * (i + 1))])], r.minutes)}</select></label>
 <label>成功/失敗<select name="result"><option value="">未設定</option><option>成功</option><option>失敗</option></select></label>
-<label class="chk"><input name="isPrivate" type="checkbox">非公開</label>
-<label class="chk"><input name="spoiler" type="checkbox">ネタバレあり</label>
+<div class="chks"><label class="chk"><input name="isPrivate" type="checkbox">非公開</label><label class="chk"><input name="spoiler" type="checkbox">ネタバレあり</label></div>
 <label class="wide">感想（5000字まで）<textarea name="review" maxlength="5000"></textarea></label>
 <div class="actions"><button type="submit" class="save">保存</button><button type="button" class="cancel">キャンセル</button><button type="button" class="del">削除</button></div>
 <div class="saving" hidden><div class="spin"></div><span></span></div>`;
