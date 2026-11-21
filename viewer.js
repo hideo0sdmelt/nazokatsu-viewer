@@ -142,7 +142,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   };
   // 作品ID → レーベル（ナゾヒロバの作品の maker 欄）。編集後に取り直したときも使えるよう取得結果を残しておく
   const makers = new Map();
-  // 作品ID → 公演型か（WEB・アプリ・持ち帰り・本だけでなく、会場や街に出向くものか）。取れなかった作品は入れない
+  // 作品ID → 公演型か。はっきり WEB・アプリ・持ち帰り・本と分かるものだけ false、迷うものは true（緩めに残す）
   const onsiteOf = new Map();
   const toItem = (r) => ({
     id: r.id,
@@ -180,9 +180,10 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBydHdpcG5kaGNheGJ1dW1semdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDQ3NzE0MDAsImV4cCI6MjAyMDM0NzQwMH0.HomCCnxEoeL6r7E2U3k2vp3hy3PNAuqsGsTMdNHEtqM";
   // ナゾヒロバの作品の分類（categories 欄）のうち、出向いて遊ぶもの。
   // 01・02 周遊型、03 ルーム型、04・05 公演・イベント型、06 テーマパーク等、07 カフェ・バー、10 宝探し、14 マダミス、18 イマーシブ。
-  // 08 オンライン・LINE、09 アプリ、11 持ち帰り、13 本は含めない。16・17 はどちらにも付くので判定に使わない。
-  // 「オンライン＋公演」のように両方付く作品は公演型とみなす
+  // 08 オンライン・LINE、09 アプリ、11 持ち帰り、13 本は家で遊ぶもの。16・17 はどちらにも付くので判定に使わない。
+  // 除くのは家で遊ぶ分類だけが付いた作品だけ。両方付く作品（オンライン＋公演など）、分類が空か 16・17 だけの作品は公演型に残す
   const ONSITE_CODES = new Set(["01", "02", "03", "04", "05", "06", "07", "10", "14", "18"]);
+  const HOME_CODES = new Set(["08", "09", "11", "13"]);
   const loadMakers = async (items) => {
     const ids = [...new Set(items.map((r) => r.mysteryId).filter((id) => id && !makers.has(id)))];
     for (let i = 0; i < ids.length; i += 100) {
@@ -194,7 +195,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       for (const m of await res.json()) {
         makers.set(m.id, (m.maker ?? "").trim());
         const codes = (m.categories ?? "").split(",").filter(Boolean);
-        if (codes.length) onsiteOf.set(m.id, codes.some((c) => ONSITE_CODES.has(c)));
+        onsiteOf.set(m.id, codes.some((c) => ONSITE_CODES.has(c)) || !codes.some((c) => HOME_CODES.has(c)));
       }
     }
     for (const r of items) {
@@ -627,7 +628,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
         if (!lower.every((w) => hay.includes(w))) return false;
         if (result === "-" ? r.result !== "" : result && r.result !== result) return false;
         if (maker && (maker === "-" ? r.maker !== "" : !labelsOfItem(r).includes(maker))) return false;
-        if (onsiteOnly && r.onsite !== true) return false;
+        if (onsiteOnly && r.onsite === false) return false;
         if ($("priv").checked && !r.isPrivate) return false;
         if ($("withReview").checked && !r.review) return false;
         if ($("noDate").checked && r.playDate) return false;
