@@ -12,8 +12,8 @@
   const root = host.attachShadow({ mode: "open" });
   root.innerHTML = `<style>
 *{box-sizing:border-box}
-.root{--bg:#f3f4f7;--card:#fff;--text:#1f2328;--sub:#667085;--line:#e0e3e8;--accent:#2457b8;--on:#fff;--chip:#eceff4;min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,"Hiragino Sans",sans-serif}
-@media (prefers-color-scheme:dark){.root{--bg:#15171b;--card:#1f2228;--text:#e8eaed;--sub:#9aa3b0;--line:#323741;--accent:#7aa7ff;--on:#10131a;--chip:#2a2e36}}
+.root{--bg:#f3f4f7;--card:#fff;--text:#1f2328;--sub:#667085;--line:#e0e3e8;--accent:#2457b8;--on:#fff;--chip:#eceff4;--check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.8 8.4l2.8 2.8 5.6-6.2' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,"Hiragino Sans",sans-serif}
+@media (prefers-color-scheme:dark){.root{--bg:#15171b;--card:#1f2228;--text:#e8eaed;--sub:#9aa3b0;--line:#323741;--accent:#7aa7ff;--on:#10131a;--chip:#2a2e36;--check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.8 8.4l2.8 2.8 5.6-6.2' fill='none' stroke='%2310131a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}}
 .top{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--line)}
 .top h1{margin:0;font-size:18px}
 #close{min-height:48px;padding:0 22px;font-size:18px;font-weight:700;border:0;border-radius:10px;background:var(--accent);color:var(--on)}
@@ -48,7 +48,15 @@
 .seg button{height:38px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text)}
 .seg button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on);font-weight:700}
 .seg button span{margin-left:4px;font-size:12px;opacity:.75}
-.chip{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card)}
+/* 絞り込みのチェックは、オンでチップ全体がレーベルのボタンと同じ色になるトグルにする（input は残して見た目だけ変える） */
+.chip{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px 0 10px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text);user-select:none;transition:background-color .15s,border-color .15s,color .15s}
+.chip input{appearance:none;-webkit-appearance:none;flex:none;width:18px;height:18px;margin:0;border:1.5px solid var(--sub);border-radius:50%;background:transparent center/14px 14px no-repeat;cursor:pointer;transition:border-color .15s}
+.chip:has(input:checked){background:var(--accent);border-color:var(--accent);color:var(--on)}
+.chip input:checked{border-color:var(--on);background-image:var(--check)}
+.chip:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.chip input:focus-visible{outline:none}
+.chip:has(input:disabled){opacity:.45;cursor:not-allowed}
+.chip input:disabled{cursor:not-allowed}
 .chip[hidden]{display:none}
 #count{font-size:13px;color:var(--sub);margin:6px 2px 10px}
 .card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
@@ -103,7 +111,11 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 .edit{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
 .edit label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--sub)}
 .edit input[type=date],.edit select,.edit textarea{font-size:16px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
-.edit label.chk{flex-direction:row;align-items:center;gap:8px;font-size:15px;color:var(--text)}
+/* 編集フォームの非公開・ネタバレはスイッチにする */
+.edit label.chk{flex-direction:row;align-items:center;gap:10px;font-size:15px;color:var(--text);cursor:pointer;user-select:none}
+.edit label.chk input{appearance:none;-webkit-appearance:none;flex:none;width:42px;height:24px;margin:0;border-radius:12px;background:radial-gradient(circle,#fff 0 8.5px,transparent 9px) 2px 50%/20px 20px no-repeat var(--line);box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);cursor:pointer;transition:background-position .18s,background-color .18s}
+.edit label.chk input:checked{background-color:var(--accent);background-position:20px 50%}
+.edit label.chk input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .edit .wide{grid-column:1/-1}
 .edit .chks{grid-column:1/-1;display:flex;gap:24px}
 .edit textarea{min-height:160px;line-height:1.5}
@@ -268,6 +280,8 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     if (res.status === 404) return { memos: {}, sha: null };
     if (!res.ok) throw memoError(res, "取得");
     const j = await res.json();
+    // 1MBを超えるファイルは content が空（encoding: "none"）で返る。空のメモとして扱うと、保存で全部のメモを上書きしてしまうので止める
+    if (j.encoding !== "base64") throw new Error("memos.json が大きすぎて読めません（1MB超）。保存すると他のメモを消してしまうため、メモは使えません");
     return { memos: JSON.parse(b64decode(j.content ?? "") || "{}"), sha: j.sha };
   };
   const loadMemos = async () => {
