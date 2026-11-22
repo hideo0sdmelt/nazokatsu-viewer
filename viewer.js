@@ -62,7 +62,14 @@
 .seg[hidden]{display:none}
 .seg button{height:38px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text)}
 /* 選んだレーベルは、塗りつぶさず薄い色と枠で示す（条件のチップとも見分けられる） */
-.seg button[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 14%,var(--card));border-color:var(--accent);color:var(--accent)}
+/* 上位4レーベルの色。彩度を落とし、状態の札（成功=緑・失敗=赤・非公開=紫・ネタバレ=橙）と被らない青・青緑・赤紫・茶にする。
+   レーベルは枠と文字に色を付け、状態の札は地を塗るので、形でも見分けられる */
+.root{--lc0:#2f5fb3;--lb0:#e6eefb;--lc1:#127a72;--lb1:#ddf2ef;--lc2:#9b3a86;--lb2:#f6e6f2;--lc3:#86602f;--lb3:#f3ebdf}
+@media (prefers-color-scheme:dark){.root{--lc0:#8fb2f0;--lb0:#1d283d;--lc1:#6cc9bd;--lb1:#16302c;--lc2:#dc9ccd;--lb2:#33202f;--lc3:#d3b27e;--lb3:#33291b}}
+.lc0{--lc:var(--lc0);--lb:var(--lb0)}.lc1{--lc:var(--lc1);--lb:var(--lb1)}.lc2{--lc:var(--lc2);--lb:var(--lb2)}.lc3{--lc:var(--lc3);--lb:var(--lb3)}
+.seg button{display:inline-flex;align-items:center}
+.seg button[class^=lc]::before{content:"";width:8px;height:8px;margin-right:6px;border-radius:50%;background:var(--lc)}
+.seg button[aria-pressed=true]{background:var(--lb,var(--chip));border-color:var(--lc,var(--accent));color:var(--lc,var(--accent))}
 .seg button span{margin-left:4px;font-size:12px;opacity:.75}
 /* 絞り込みのチェックは、オンでチップ全体がレーベルのボタンと同じ色になるトグルにする（input は残して見た目だけ変える） */
 .chip{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px 0 10px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text);user-select:none;transition:background-color .15s,border-color .15s,color .15s}
@@ -91,6 +98,7 @@
 .info .star{color:#b7791f;font-weight:700}
 .info .sep{opacity:.5}
 .tag.maker{background:none;border:1px solid var(--line);color:var(--text)}
+.tag.maker[class*=lc]{border-color:color-mix(in srgb,var(--lc) 55%,transparent);color:var(--lc)}
 .tag.ok{background:#d9f2e1;color:#14663a}
 .tag.ng{background:#fde0e0;color:#a12a2a}
 .tag.priv{background:#e4e0f5;color:#4b3a9a}
@@ -106,6 +114,9 @@
 .memo-edit{display:flex;flex-direction:column;gap:8px;margin-top:8px}
 .memo-edit textarea{min-height:100px;resize:vertical;font-size:16px;line-height:1.5;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
 .memo-edit .note{font-size:12px;color:var(--sub)}
+/* 保存・キャンセルの行は、編集中のカードが画面にある間は画面の下に貼り付け、スクロールせずに押せるようにする */
+.edit .actions,.memo-edit .actions{position:sticky;bottom:0;z-index:2;margin:0 -14px -12px;padding:10px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);border-radius:0 0 12px 12px;background:var(--card);box-shadow:0 -6px 12px -10px rgba(0,0,0,.35)}
+@media (max-width:640px){.edit .actions,.memo-edit .actions{margin:0 -10px -8px;padding:8px 10px calc(8px + env(safe-area-inset-bottom))}}
 .memo-edit .actions{display:flex;gap:10px}
 .memo-edit .actions button{flex:1;height:46px;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text)}
 .memo-edit .actions .save{background:var(--accent);color:var(--on);border:0;font-weight:700}
@@ -170,9 +181,16 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 .edit .pick .x[hidden]{display:none}
 .segs button{min-width:44px;height:38px;padding:0 12px;font-size:15px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text)}
 .segs button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on);font-weight:700}
-/* 成功/失敗は、カードの札と同じ色にする */
-[data-pick=result] .segs button[data-v=成功][aria-pressed=true]{background:#d9f2e1;border-color:#14663a;color:#14663a}
-[data-pick=result] .segs button[data-v=失敗][aria-pressed=true]{background:#fde0e0;border-color:#a12a2a;color:#a12a2a}
+/* 成功/失敗は、カードの札と同じ系統の色を控えめに使う（赤が「エラー」や「削除」に見えないよう、地と枠は薄く）。
+   色を弱めたぶん、選んだものには ✓ を付けて分かるようにする */
+[data-pick=result] .segs button[aria-pressed=true]{font-weight:600}
+[data-pick=result] .segs button[aria-pressed=true]::before{content:"✓ "}
+[data-pick=result] .segs button[data-v=成功][aria-pressed=true]{background:#eef8f1;border-color:#a9d8b8;color:#1f6b3f}
+[data-pick=result] .segs button[data-v=失敗][aria-pressed=true]{background:#fcf0f0;border-color:#e6b4b4;color:#9a3a3a}
+@media (prefers-color-scheme:dark){
+[data-pick=result] .segs button[data-v=成功][aria-pressed=true]{background:#1a2e22;border-color:#2f5e41;color:#8fd0a6}
+[data-pick=result] .segs button[data-v=失敗][aria-pressed=true]{background:#33201f;border-color:#6e3a3a;color:#eba5a5}
+}
 .edit .chks{grid-column:1/-1;display:flex;gap:24px}
 .edit textarea{min-height:100px;line-height:1.5;resize:vertical}
 .edit .actions{grid-column:1/-1;display:flex;gap:10px}
@@ -942,7 +960,10 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       s.textContent = text;
       meta.append(s);
     };
-    if (r.maker) tag(r.maker, "maker");
+    // 上位4レーベルのどれか1つだけの作品は、その色。コラボやそれ以外のレーベルは色を付けない
+    const ls = labelsOfItem(r);
+    const lc = ls.length === 1 ? colorOf?.get(ls[0]) : undefined;
+    if (r.maker) tag(r.maker, lc === undefined ? "maker" : `maker lc${lc}`);
     const parts = [];
     const part = (text, cls = "") => {
       const s = document.createElement("span");
@@ -1077,6 +1098,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   // 件数の多い4つのレーベルはボタンで選べるようにし、残りをセレクトボックスに入れる。
   // ボタンの顔ぶれは開いたときに決めて固定する（編集で件数が入れ替わってもボタンが動かないように）
   let mainMakers = null;
+  let colorOf = null;
   let pickedMain = "";
   // 前回のレーベルの選択。セレクトボックスの選択肢は初回の描画で作るので、そのときに戻す
   let restoreMaker = null;
@@ -1089,6 +1111,17 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     for (const r of data) for (const m of r.maker ? labelsOfItem(r) : [""]) counts.set(m, (counts.get(m) ?? 0) + 1);
     const sorted = [...counts].sort((a, b) => !a[0] - !b[0] || b[1] - a[1] || a[0].localeCompare(b[0], "ja"));
     mainMakers ??= sorted.filter(([m]) => m).slice(0, 4).map(([m]) => m);
+    // 色はレーベル名から決め、件数の順位が入れ替わっても同じレーベルは同じ色にする（4つの中で被ったら次の色）
+    if (!colorOf) {
+      colorOf = new Map();
+      const used = new Set();
+      for (const m of [...mainMakers].sort()) {
+        let c = [...m].reduce((h, ch) => (h * 31 + ch.codePointAt(0)) >>> 0, 7) % 4;
+        while (used.has(c)) c = (c + 1) % 4;
+        used.add(c);
+        colorOf.set(m, c);
+      }
+    }
     // 前回選んだボタンが今回の上位4つに無ければ外す
     if (pickedMain && !mainMakers.includes(pickedMain)) pickedMain = "";
     $("mainMakers").replaceChildren(
@@ -1096,6 +1129,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
         const b = document.createElement("button");
         b.type = "button";
         b.dataset.maker = m;
+        b.className = `lc${colorOf.get(m)}`;
         b.setAttribute("aria-pressed", String(pickedMain === m));
         b.append(m);
         const n = document.createElement("span");
