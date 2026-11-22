@@ -77,7 +77,10 @@
 .card h2 a{color:var(--accent);text-decoration:none}
 .meta{display:flex;flex-wrap:wrap;gap:6px}
 .tag{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--sub)}
-.tag.star{color:#b7791f;font-weight:700}
+/* 日付と評価類は1行の薄い文字にまとめ、色付きの札は状態（成功・失敗・非公開・ネタバレ）とレーベルだけにする */
+.info{display:inline-flex;align-items:center;flex-wrap:wrap;gap:0 6px;font-size:13px;color:var(--sub)}
+.info .star{color:#b7791f;font-weight:700}
+.info .sep{opacity:.5}
 .tag.maker{background:none;border:1px solid var(--line);color:var(--text)}
 .tag.ok{background:#d9f2e1;color:#14663a}
 .tag.ng{background:#fde0e0;color:#a12a2a}
@@ -106,6 +109,7 @@
 .card h2{font-size:15px;line-height:1.35;margin:0 0 5px}
 .meta{gap:4px}
 .tag{font-size:11px;padding:1px 6px}
+.info{font-size:12px;gap:0 5px}
 .review{margin-top:5px;font-size:14px;line-height:1.5}
 .card.long::after{right:10px;bottom:8px;line-height:21px}
 .edit-btn{height:26px;margin:-3px 0;padding:0 8px}
@@ -130,6 +134,18 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 .edit label.chk input:checked{background-color:var(--accent);background-position:20px 50%}
 .edit label.chk input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .edit .wide{grid-column:1/-1}
+/* 満足度は★、難易度と成功/失敗はボタンを並べ、1回のタップで選べるようにする */
+.edit .pick{grid-column:1/-1;display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--sub)}
+.edit .pick .pv{margin-left:6px;font-weight:700;color:var(--text)}
+.edit .pick .hint{margin-left:6px}
+.prow{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.stars button{width:40px;height:40px;padding:0;font-size:30px;line-height:1;border:0;background:none;color:var(--line)}
+.stars button.full{color:#f5a623}
+.stars button.half{background:linear-gradient(90deg,#f5a623 50%,var(--line) 50%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.prow .x{flex:none;white-space:nowrap;height:30px;padding:0 10px;margin-left:4px;font-size:13px;border:1px solid var(--line);border-radius:15px;background:var(--card);color:var(--sub)}
+.prow .x[hidden]{display:none}
+.segs button{min-width:44px;height:38px;padding:0 12px;font-size:15px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text)}
+.segs button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on);font-weight:700}
 .edit .chks{grid-column:1/-1;display:flex;gap:24px}
 .edit textarea{min-height:160px;line-height:1.5}
 .edit .actions{grid-column:1/-1;display:flex;gap:10px}
@@ -634,20 +650,96 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     const unset = ["", "未設定"];
     form.innerHTML = `
 <label>参加日<input name="playDate" type="date" required></label>
-<label>満足度<select name="satisfaction">${options([unset, ...Array.from({ length: 9 }, (_, i) => [1 + i * 0.5, 1 + i * 0.5])], r.satisfaction)}</select></label>
-<label>難易度<select name="difficulty">${options([unset, ...[1, 2, 3, 4, 5].map((n) => [n, n])], r.difficulty)}</select></label>
 <label>プレイ時間<select name="minutes">${options([unset, ...Array.from({ length: 48 }, (_, i) => [15 * (i + 1), minuteLabel(15 * (i + 1))])], r.minutes)}</select></label>
-<label>成功/失敗<select name="result"><option value="">未設定</option><option>成功</option><option>失敗</option></select></label>
+<div class="pick" data-pick="satisfaction"></div>
+<div class="pick" data-pick="difficulty"></div>
+<div class="pick" data-pick="result"></div>
 <div class="chks"><label class="chk"><input name="isPrivate" type="checkbox">非公開</label><label class="chk"><input name="spoiler" type="checkbox">ネタバレあり</label></div>
 <label class="wide">感想（5000字まで）<textarea name="review" maxlength="5000"></textarea></label>
 <div class="actions"><button type="submit" class="save">保存</button><button type="button" class="cancel">キャンセル</button><button type="button" class="del">削除</button></div>
 <div class="saving" hidden><div class="spin"></div><span></span></div>`;
+    // 選んだ値は隠し入力に持ち、ボタンの見た目はそこから描く（触らなければ元の値のまま送らない）
+    const picker = (name, label, build) => {
+      const box = form.querySelector(`[data-pick="${name}"]`);
+      const hidden = document.createElement("input");
+      hidden.type = "hidden";
+      hidden.name = name;
+      hidden.value = String(r[name]);
+      const title = document.createElement("div");
+      const pv = document.createElement("span");
+      pv.className = "pv";
+      title.append(label, pv);
+      const row = document.createElement("div");
+      row.className = "prow";
+      box.append(title, row, hidden);
+      const set = build(row, hidden, title, () => set());
+      set();
+      return { hidden, pv };
+    };
+    const btn = (row, text, cls = "") => {
+      const b = document.createElement("button");
+      b.type = "button";
+      if (cls) b.className = cls;
+      b.textContent = text;
+      row.append(b);
+      return b;
+    };
+    // 満足度: ★を押すとその数。同じ★をもう一度押すと 0.5 下げる（1 より下にはしない）。× で未設定
+    picker("satisfaction", "満足度", (row, hidden, title, refresh) => {
+      row.classList.add("stars");
+      const hint = document.createElement("span");
+      hint.className = "hint";
+      hint.textContent = "同じ★をもう一度押すと −0.5";
+      title.append(hint);
+      const stars = [1, 2, 3, 4, 5].map((n) => {
+        const b = btn(row, "★");
+        b.dataset.v = n;
+        b.setAttribute("aria-label", `満足度 ${n}`);
+        b.addEventListener("click", () => {
+          const v = Number(hidden.value || 0);
+          hidden.value = String(v === n ? Math.max(1, n - 0.5) : n);
+          refresh();
+        });
+        return b;
+      });
+      const x = btn(row, "× 未設定", "x");
+      x.addEventListener("click", () => {
+        hidden.value = "";
+        refresh();
+      });
+      return () => {
+        const v = Number(hidden.value || 0);
+        stars.forEach((b, i) => {
+          b.classList.toggle("full", v >= i + 1);
+          b.classList.toggle("half", v > i && v < i + 1);
+        });
+        title.querySelector(".pv").textContent = hidden.value === "" ? "未設定" : hidden.value;
+        x.hidden = hidden.value === "";
+      };
+    });
+    // 難易度・成功/失敗: ボタンを並べ、押しているものをもう一度押すと未設定に戻す
+    const segPicker = (name, label, values) =>
+      picker(name, label, (row, hidden, title, refresh) => {
+        row.classList.add("segs");
+        const bs = values.map((v) => {
+          const b = btn(row, String(v));
+          b.dataset.v = v;
+          b.addEventListener("click", () => {
+            hidden.value = hidden.value === String(v) ? "" : String(v);
+            refresh();
+          });
+          return b;
+        });
+        return () => {
+          for (const b of bs) b.setAttribute("aria-pressed", String(b.dataset.v === hidden.value));
+          row.parentElement.querySelector(".pv").textContent = hidden.value === "" ? "未設定" : "";
+        };
+      });
+    segPicker("difficulty", "難易度", [1, 2, 3, 4, 5]);
+    segPicker("result", "成功/失敗", ["成功", "失敗"]);
     const f = form.elements;
     f.playDate.value = r.playDate;
-    f.satisfaction.value = String(r.satisfaction);
-    f.difficulty.value = String(r.difficulty);
     f.minutes.value = String(r.minutes);
-    f.result.value = r.result;
     f.isPrivate.checked = r.isPrivate;
     f.spoiler.checked = r.spoiler;
     f.review.value = r.review;
@@ -792,10 +884,31 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       meta.append(s);
     };
     if (r.maker) tag(r.maker, "maker");
-    if (r.playDate) tag(r.playDate);
-    if (r.satisfaction !== "") tag(`★ ${r.satisfaction}`, "star");
-    if (r.difficulty !== "") tag(`難易度 ${r.difficulty}`);
-    if (r.minutes !== "") tag(`${r.minutes}分`);
+    const parts = [];
+    const part = (text, cls = "") => {
+      const s = document.createElement("span");
+      if (cls) s.className = cls;
+      s.textContent = text;
+      parts.push(s);
+    };
+    if (r.playDate) part(r.playDate);
+    if (r.satisfaction !== "") part(`★${r.satisfaction}`, "star");
+    if (r.difficulty !== "") part(`難易度${r.difficulty}`);
+    if (r.minutes !== "") part(minuteLabel(Number(r.minutes)));
+    if (parts.length) {
+      const info = document.createElement("span");
+      info.className = "info";
+      parts.forEach((s, i) => {
+        if (i) {
+          const sep = document.createElement("span");
+          sep.className = "sep";
+          sep.textContent = "·";
+          info.append(sep);
+        }
+        info.append(s);
+      });
+      meta.append(info);
+    }
     if (r.result) tag(r.result, r.result === "成功" ? "ok" : "ng");
     if (r.isPrivate) tag("非公開", "priv");
     if (r.spoiler) tag("ネタバレ", "spoil");
@@ -906,14 +1019,19 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   // ボタンの顔ぶれは開いたときに決めて固定する（編集で件数が入れ替わってもボタンが動かないように）
   let mainMakers = null;
   let pickedMain = "";
+  // 前回のレーベルの選択。セレクトボックスの選択肢は初回の描画で作るので、そのときに戻す
+  let restoreMaker = null;
   const fillMakers = () => {
     buildLabels();
     const sel = $("maker");
-    const current = sel.value;
+    const current = restoreMaker ?? sel.value;
+    restoreMaker = null;
     const counts = new Map();
     for (const r of data) for (const m of r.maker ? labelsOfItem(r) : [""]) counts.set(m, (counts.get(m) ?? 0) + 1);
     const sorted = [...counts].sort((a, b) => !a[0] - !b[0] || b[1] - a[1] || a[0].localeCompare(b[0], "ja"));
     mainMakers ??= sorted.filter(([m]) => m).slice(0, 4).map(([m]) => m);
+    // 前回選んだボタンが今回の上位4つに無ければ外す
+    if (pickedMain && !mainMakers.includes(pickedMain)) pickedMain = "";
     $("mainMakers").replaceChildren(
       ...mainMakers.map((m) => {
         const b = document.createElement("button");
@@ -930,6 +1048,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     $("mainMakers").hidden = mainMakers.length === 0;
     // 分類を取れなかったとき（Supabase の失敗など）は、全部消えてしまうので公演型の絞り込みを使えなくする
     $("onsite").disabled = onsiteOf.size === 0;
+    if ($("onsite").disabled) $("onsite").checked = false;
     const opts = sorted
       .filter(([m]) => !mainMakers.includes(m))
       .map(([m, n]) => new Option(`${m || "不明"}（${n}）`, m || "-"));
@@ -948,6 +1067,21 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   const rememberAndUsed = () => {
     try {
       localStorage.setItem(AND_USED_KEY, "1");
+    } catch {}
+  };
+  // 並び替えと絞り込みは、次に開いたときに戻せるようナゾヒロバのページの localStorage に残す（検索語は残さない）
+  const PREFS_KEY = "nazokatsuViewerPrefs";
+  const loadPrefs = () => {
+    try {
+      return JSON.parse(localStorage.getItem(PREFS_KEY) ?? "null") ?? {};
+    } catch {
+      return {};
+    }
+  };
+  const savePrefs = () => {
+    try {
+      const checks = Object.fromEntries(FILTER_CHECKS.filter((id) => $(id).checked).map((id) => [id, true]));
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ sort: $("sort").value, result: $("result").value, maker: $("maker").value, pickedMain, checks }));
     } catch {}
   };
   // 「条件をクリア」で戻すもの。並び替えと検索欄はそのまま
@@ -994,6 +1128,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     $("memoOnlyChip").hidden = memoState !== "ok";
     const active = [result !== "", maker !== ""].filter(Boolean).length + activeChecks().length;
     $("clear").hidden = active === 0;
+    savePrefs();
     $("toggle").textContent = active ? `絞り込み(${active})` : "絞り込み";
     $("toggle").classList.toggle("on", active > 0);
     if (rows.length) $("list").replaceChildren(...rows.map((r) => card(r, words)));
@@ -1025,6 +1160,14 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   };
   for (const id of ["q", "sort", "result", ...FILTER_CHECKS]) $(id).addEventListener("input", render);
   $("clear").addEventListener("click", clearFilters);
+  {
+    const prefs = loadPrefs();
+    if (prefs.sort && sorters[prefs.sort]) $("sort").value = prefs.sort;
+    if ([...$("result").options].some((o) => o.value === prefs.result)) $("result").value = prefs.result;
+    restoreMaker = typeof prefs.maker === "string" ? prefs.maker : null;
+    pickedMain = typeof prefs.pickedMain === "string" ? prefs.pickedMain : "";
+    for (const id of FILTER_CHECKS) $(id).checked = prefs.checks?.[id] === true;
+  }
   // メモ用のトークンを端末ごとに入れる。空にすると消す。入れたら読み直して一覧に反映する
   $("memoSet").addEventListener("click", async () => {
     setMenu(false);
