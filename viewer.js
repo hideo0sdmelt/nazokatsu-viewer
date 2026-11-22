@@ -301,7 +301,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
 @keyframes s{to{transform:rotate(360deg)}}
 </style>
 <div class="root">
-<div class="top"><div class="tl"><h1>自分のナゾ活</h1><div id="tabs" class="tabs" role="tablist" hidden><button id="tabList" type="button" role="tab" aria-selected="true">一覧</button><button id="tabStats" type="button" role="tab" aria-selected="false">集計</button></div></div><div class="topbtns"><div class="menuwrap"><button id="menuBtn" class="icon" type="button" aria-label="メニュー" aria-haspopup="true" aria-expanded="false">⋯</button><div id="menu" class="menu" hidden><div id="fetchedAt" class="menu-info">取得中…</div><button id="memoSet" type="button">メモの設定（トークン）</button></div></div><button id="close" class="icon" type="button" aria-label="閉じる" title="閉じる（Esc）">✕</button></div></div>
+<div class="top"><div class="tl"><h1>自分のナゾ活</h1><div id="tabs" class="tabs" role="tablist" hidden><button id="tabList" type="button" role="tab" aria-selected="true">一覧</button><button id="tabStats" type="button" role="tab" aria-selected="false">集計</button></div></div><div class="topbtns"><div class="menuwrap"><button id="menuBtn" class="icon" type="button" aria-label="メニュー" aria-haspopup="true" aria-expanded="false">⋯</button><div id="menu" class="menu" hidden><div id="fetchedAt" class="menu-info">取得中…</div><button id="refetch" type="button">最新を取得</button><button id="memoSet" type="button">メモの設定（トークン）</button></div></div><button id="close" class="icon" type="button" aria-label="閉じる" title="閉じる（Esc）">✕</button></div></div>
 <div id="main"><div class="loading"><div class="spin"></div>ナゾ活を取得中…</div></div>
 <div id="dlg" class="dlg-back" hidden></div>
 <div id="toast" hidden></div>
@@ -1520,7 +1520,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   // 裏に残したアプリに戻ったとき、取得から1時間以上たっていれば知らせる
   const onVisible = () => {
     if (document.visibilityState === "visible" && host.isConnected && fetchedAt && Date.now() - fetchedAt > 3600e3) {
-      toast(`${agoText()}に取得した一覧です。最新にするにはページを再読み込みしてください`);
+      toast(`${agoText()}に取得した一覧です。最新にするには ⋯ →「最新を取得」`);
     }
   };
   document.addEventListener("visibilitychange", onVisible);
@@ -1740,6 +1740,44 @@ ${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
   $("tabList").addEventListener("click", () => showTab(false));
   $("tabStats").addEventListener("click", () => showTab(true));
   $("tabs").hidden = false;
+  // ⋯ →「最新を取得」：ページを再読み込みせずに、ナゾ活・レーベル・メモを取り直す。
+  // 絞り込み・検索・並び順・スクロール位置はそのまま。編集中の書きかけがあれば先に確かめる（取り直すと編集を閉じる）
+  let refetching = false;
+  $("refetch").addEventListener("click", async () => {
+    setMenu(false);
+    if (refetching || !(await confirmDiscard())) return;
+    refetching = true;
+    $("refetch").disabled = true;
+    $("count").textContent = "最新を取得中…";
+    try {
+      const fresh = await fetchAll(await getAuth());
+      try {
+        await loadMakers(fresh);
+      } catch (e) {
+        console.warn(e);
+      }
+      await loadMemos();
+      if (!host.isConnected) return;
+      const before = data.length;
+      data = fresh;
+      editingId = null;
+      memoEditingId = null;
+      const top = host.scrollTop;
+      render();
+      if (onStats) renderStats();
+      host.scrollTop = top;
+      const diff = data.length - before;
+      toast(`最新にしました（${data.length}件${diff ? `・${diff > 0 ? "+" : ""}${diff}件` : ""}）`);
+      if (memoProblem) notify(memoProblem, "メモを読み込めません");
+    } catch (e) {
+      // 取れなかったときは、今の一覧をそのまま残す
+      render();
+      notify(e.message, "最新を取得できませんでした");
+    } finally {
+      refetching = false;
+      $("refetch").disabled = false;
+    }
+  });
   render();
   if (memoProblem) toast(memoProblem);
 })().catch((e) => alert("エラー: " + e.message));
