@@ -38,7 +38,10 @@
 #toggle::after{content:"▼";margin-left:6px;font-size:11px;vertical-align:1px}
 #toggle[aria-expanded=true]{background:var(--chip)}
 #toggle[aria-expanded=true]::after{content:"▲"}
-.filters{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+/* 絞り込みは枠で囲み、「レーベル」「条件」の段に分ける。並び替えは絞り込みではないので件数の行に置く */
+.filters{display:flex;flex-direction:column;gap:8px;margin-top:8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.fgroup{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.flabel{flex:none;width:4.5em;font-size:12px;font-weight:600;color:var(--sub)}
 @media (max-width:640px){
 .top{padding:4px 12px}
 .top h1{font-size:15px}
@@ -48,12 +51,17 @@
 #toggle{display:block}
 .filters{display:none}
 .bar.show .filters{display:flex}
+.flabel{width:100%}
 }
 .filters select{height:38px;font-size:14px;padding:0 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text)}
+.countrow .left{display:flex;align-items:center;gap:8px;min-width:0}
+.sortbox{flex:none;display:flex;align-items:center;gap:2px;font-size:12px;color:var(--sub)}
+.sortbox select{height:30px;padding:0 4px;font-size:13px;font-weight:600;border:0;border-radius:6px;background:transparent;color:var(--text)}
+@media (hover:hover){.sortbox select:hover{background:var(--chip)}}
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg[hidden]{display:none}
 .seg button{height:38px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text)}
-.seg button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on);font-weight:700}
+.seg button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on)}
 .seg button span{margin-left:4px;font-size:12px;opacity:.75}
 /* 絞り込みのチェックは、オンでチップ全体がレーベルのボタンと同じ色になるトグルにする（input は残して見た目だけ変える） */
 .chip{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px 0 10px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text);user-select:none;transition:background-color .15s,border-color .15s,color .15s}
@@ -127,6 +135,11 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 .edit-btn{flex:none;height:30px;padding:0 10px;font-size:13px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--accent)}
 .edit{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
 .edit label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--sub)}
+/* 参加日: 表示は自前の「2026/11/01(日)」にし、上に透明な日付欄を重ねて押すと日付の選択を開く */
+.datebox{position:relative;display:flex;align-items:center;gap:6px;padding:8px;font-size:16px;line-height:1.2;color:var(--text);border:1px solid var(--line);border-radius:8px;background:var(--bg);cursor:pointer}
+.datebox:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.datebox .dicon{margin-left:auto;font-size:12px;color:var(--sub)}
+.edit .datebox input{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer}
 .edit input[type=date],.edit select,.edit textarea{font-size:16px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
 /* 編集フォームの非公開・ネタバレはスイッチにする */
 .edit label.chk{flex-direction:row;align-items:center;gap:10px;font-size:15px;color:var(--text);cursor:pointer;user-select:none}
@@ -139,11 +152,25 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 .edit .pick .pv{margin-left:6px;font-weight:700;color:var(--text)}
 .edit .pick .hint{margin-left:6px}
 .prow{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
-.stars button{width:40px;height:40px;padding:0;font-size:30px;line-height:1;border:0;background:none;color:var(--line)}
-.stars button.full{color:#f5a623}
-.stars button.half{background:linear-gradient(90deg,#f5a623 50%,var(--line) 50%);-webkit-background-clip:text;background-clip:text;color:transparent}
-.prow .x{flex:none;white-space:nowrap;height:30px;padding:0 10px;margin-left:4px;font-size:13px;border:1px solid var(--line);border-radius:15px;background:var(--card);color:var(--sub)}
-.prow .x[hidden]{display:none}
+/* 満足度のスライダー。1〜5 を 0.5 刻み。未設定のときは灰色にし、触ると値が入る */
+.slider{flex-wrap:nowrap;align-items:flex-start;gap:10px}
+.rwrap{flex:1;min-width:0}
+.rwrap input[type=range]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:30px;margin:0;background:transparent;cursor:pointer}
+.rwrap input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:4px;background:linear-gradient(90deg,#f5a623 var(--p),var(--line) var(--p))}
+.rwrap input[type=range]::-moz-range-track{height:8px;border-radius:4px;background:linear-gradient(90deg,#f5a623 var(--p),var(--line) var(--p))}
+.rwrap input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;margin-top:-9px;border:3px solid #f5a623;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.rwrap input[type=range]::-moz-range-thumb{width:20px;height:20px;border:3px solid #f5a623;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.rwrap.unset input[type=range]::-webkit-slider-runnable-track{background:var(--line)}
+.rwrap.unset input[type=range]::-moz-range-track{background:var(--line)}
+.rwrap.unset input[type=range]::-webkit-slider-thumb{border-color:var(--sub);opacity:.55}
+.rwrap.unset input[type=range]::-moz-range-thumb{border-color:var(--sub);opacity:.55}
+.scale{display:flex;justify-content:space-between;padding:0 13px;font-size:12px;color:var(--sub)}
+.scale span{display:flex;justify-content:center;width:0}
+.edit [data-pick=satisfaction] .pv{color:#b7791f;font-size:15px}
+.edit [data-pick=satisfaction] .unset .pv{color:var(--sub);font-size:12px}
+.edit .pick > div:first-child{display:flex;align-items:center;min-height:30px}
+.edit .pick .x{flex:none;white-space:nowrap;height:26px;padding:0 10px;margin-left:auto;font-size:12px;border:1px solid var(--line);border-radius:13px;background:var(--card);color:var(--sub)}
+.edit .pick .x[hidden]{display:none}
 .segs button{min-width:44px;height:38px;padding:0 12px;font-size:15px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text)}
 .segs button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on);font-weight:700}
 .edit .chks{grid-column:1/-1;display:flex;gap:24px}
@@ -485,32 +512,37 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     <div id="qhint" hidden>スペースで区切ると、すべての言葉を含むものに絞り込みます</div>
   </div>
   <div class="filters">
-    <select id="sort">
-      <option value="date-desc">参加日 新しい順</option>
-      <option value="date-asc">参加日 古い順</option>
-      <option value="posted-desc">投稿日 新しい順</option>
-      <option value="posted-asc">投稿日 古い順</option>
-      <option value="sat-desc">満足度 高い順</option>
-      <option value="sat-asc">満足度 低い順</option>
-      <option value="title">作品名順</option>
-    </select>
-    <select id="result">
-      <option value="">成功/失敗: すべて</option>
-      <option value="成功">成功</option>
-      <option value="失敗">失敗</option>
-      <option value="-">未設定</option>
-    </select>
-    <div id="mainMakers" class="seg"></div>
-    <select id="maker"></select>
-    <label class="chip"><input id="onsite" type="checkbox">公演型のみ</label>
-    <label class="chip"><input id="priv" type="checkbox">非公開のみ</label>
-    <label class="chip"><input id="withReview" type="checkbox">感想ありのみ</label>
-    <label class="chip"><input id="noDate" type="checkbox">参加日なしのみ</label>
-    <label class="chip"><input id="noRating" type="checkbox">満足度・難易度・時間の未入力ありのみ</label>
-    <label class="chip" id="memoOnlyChip" hidden><input id="memoOnly" type="checkbox">メモありのみ</label>
+    <div class="fgroup"><span class="flabel">レーベル</span>
+      <div id="mainMakers" class="seg"></div>
+      <select id="maker"></select>
+    </div>
+    <div class="fgroup"><span class="flabel">条件</span>
+      <select id="result">
+        <option value="">成功/失敗: すべて</option>
+        <option value="成功">成功</option>
+        <option value="失敗">失敗</option>
+        <option value="-">成功/失敗: 未設定</option>
+      </select>
+      <label class="chip"><input id="onsite" type="checkbox">公演型のみ</label>
+      <label class="chip"><input id="priv" type="checkbox">非公開のみ</label>
+      <label class="chip"><input id="withReview" type="checkbox">感想ありのみ</label>
+      <label class="chip"><input id="noDate" type="checkbox">参加日なしのみ</label>
+      <label class="chip" title="満足度・難易度・プレイ時間のどれかが空"><input id="noRating" type="checkbox">未入力あり</label>
+      <label class="chip" id="memoOnlyChip" hidden><input id="memoOnly" type="checkbox">メモありのみ</label>
+    </div>
   </div>
 </div>
-<div class="countrow"><div id="count"></div><button id="clear" class="clear" type="button" hidden>条件をクリア</button></div>
+<div class="countrow"><div class="left"><div id="count"></div><button id="clear" class="clear" type="button" hidden>条件をクリア</button></div>
+  <label class="sortbox">並び順<select id="sort">
+    <option value="date-desc">参加日 新しい順</option>
+    <option value="date-asc">参加日 古い順</option>
+    <option value="posted-desc">投稿日 新しい順</option>
+    <option value="posted-asc">投稿日 古い順</option>
+    <option value="sat-desc">満足度 高い順</option>
+    <option value="sat-asc">満足度 低い順</option>
+    <option value="title">作品名順</option>
+  </select></label>
+</div>
 <div id="list"></div>
 </div>`;
   const num = (s) => (s === "" ? -1 : Number(s));
@@ -551,6 +583,8 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     const s = String(v).replaceAll("\n", "⏎");
     return s === "" ? "（空）" : s.length > 40 ? `${s.slice(0, 40)}…` : s;
   };
+  // プレイ時間は確認でもカードと同じ 1h30m の形で見せる
+  const showField = (k, v) => (k === "minutes" && v !== "" ? minuteLabel(Number(v)) : show(v));
   let editingId = null;
   const toast = (msg) => {
     $("toast").textContent = msg;
@@ -568,8 +602,13 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     if (!next.playDate) return notify("参加日は空にできません");
     const go = await dialog({
       title: `「${r.title}」を更新します`,
-      changes: changes.map(([k, label]) => [label, show(r[k]), show(next[k])]),
-      warn: changes.some(([k]) => k === "isPrivate") ? (next.isPrivate ? "非公開になります" : "公開されます（他の人から見えるようになります）") : "",
+      changes: changes.map(([k, label]) => [label, showField(k, r[k]), showField(k, next[k])]),
+      warn: [
+        changes.some(([k]) => k === "isPrivate") && (next.isPrivate ? "非公開になります" : "公開されます（他の人から見えるようになります）"),
+        r.spoiler && !next.spoiler && `ネタバレなしにします${next.isPrivate ? "" : "（ネタバレ注意の表示なしで、他の人に感想が見えるようになります）"}`,
+      ]
+        .filter(Boolean)
+        .join("\n"),
       ok: "保存する",
     });
     if (!go) return;
@@ -639,7 +678,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     const items = current !== "" && !list.some(([v]) => String(v) === String(current)) ? [...list, [current, current]] : list;
     return items.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
   };
-  const minuteLabel = (m) => (m < 60 ? `${m}分` : `${Math.floor(m / 60)}時間${m % 60 ? `${m % 60}分` : ""}`);
+  const minuteLabel = (m) => (m < 60 ? `${m}m` : `${Math.floor(m / 60)}h${m % 60 ? `${m % 60}m` : ""}`);
   const editCard = (r) => {
     const el = document.createElement("article");
     el.className = "card editing";
@@ -649,7 +688,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     form.className = "edit";
     const unset = ["", "未設定"];
     form.innerHTML = `
-<label>参加日<input name="playDate" type="date" required></label>
+<label>参加日<span class="datebox"><span class="dtext"></span><span class="dicon" aria-hidden="true">▾</span><input name="playDate" type="date" required></span></label>
 <label>プレイ時間<select name="minutes">${options([unset, ...Array.from({ length: 48 }, (_, i) => [15 * (i + 1), minuteLabel(15 * (i + 1))])], r.minutes)}</select></label>
 <div class="pick" data-pick="satisfaction"></div>
 <div class="pick" data-pick="difficulty"></div>
@@ -684,37 +723,45 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       row.append(b);
       return b;
     };
-    // 満足度: ★を押すとその数。同じ★をもう一度押すと 0.5 下げる（1 より下にはしない）。× で未設定
+    // 満足度: 1〜5 を 0.5 刻みのスライダーで選ぶ。未設定のときは灰色で、動かすか押すと値が入る。「未設定にする」で空に戻す
     picker("satisfaction", "満足度", (row, hidden, title, refresh) => {
-      row.classList.add("stars");
-      const hint = document.createElement("span");
-      hint.className = "hint";
-      hint.textContent = "同じ★をもう一度押すと −0.5";
-      title.append(hint);
-      const stars = [1, 2, 3, 4, 5].map((n) => {
-        const b = btn(row, "★");
-        b.dataset.v = n;
-        b.setAttribute("aria-label", `満足度 ${n}`);
-        b.addEventListener("click", () => {
-          const v = Number(hidden.value || 0);
-          hidden.value = String(v === n ? Math.max(1, n - 0.5) : n);
-          refresh();
-        });
-        return b;
-      });
-      const x = btn(row, "× 未設定", "x");
+      row.classList.add("slider");
+      const wrap = document.createElement("div");
+      wrap.className = "rwrap";
+      const range = document.createElement("input");
+      Object.assign(range, { type: "range", min: "1", max: "5", step: "0.5" });
+      range.setAttribute("aria-label", "満足度");
+      const scale = document.createElement("div");
+      scale.className = "scale";
+      for (const n of [1, 2, 3, 4, 5]) {
+        const t = document.createElement("span");
+        t.textContent = n;
+        scale.append(t);
+      }
+      wrap.append(range, scale);
+      row.append(wrap);
+      const take = () => {
+        hidden.value = range.value;
+        refresh();
+      };
+      range.addEventListener("input", take);
+      // 未設定のまま、つまみの位置（3）をそのまま押したときも値を入れる
+      range.addEventListener("pointerup", () => hidden.value === "" && take());
+      // スライダーの横に置くと、出し入れで幅が変わって目盛りがずれるので、見出しの行に置く
+      const x = btn(title, "未設定にする", "x");
       x.addEventListener("click", () => {
         hidden.value = "";
         refresh();
       });
       return () => {
-        const v = Number(hidden.value || 0);
-        stars.forEach((b, i) => {
-          b.classList.toggle("full", v >= i + 1);
-          b.classList.toggle("half", v > i && v < i + 1);
-        });
-        title.querySelector(".pv").textContent = hidden.value === "" ? "未設定" : hidden.value;
-        x.hidden = hidden.value === "";
+        const unset = hidden.value === "";
+        if (!unset) range.value = hidden.value;
+        else range.value = "3";
+        wrap.classList.toggle("unset", unset);
+        wrap.style.setProperty("--p", `${((Number(range.value) - 1) / 4) * 100}%`);
+        title.querySelector(".pv").textContent = unset ? "未設定" : `★${hidden.value}`;
+        title.classList.toggle("unset", unset);
+        x.hidden = unset;
       };
     });
     // 難易度・成功/失敗: ボタンを並べ、押しているものをもう一度押すと未設定に戻す
@@ -739,6 +786,19 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     segPicker("result", "成功/失敗", ["成功", "失敗"]);
     const f = form.elements;
     f.playDate.value = r.playDate;
+    const syncDate = () => {
+      const v = f.playDate.value;
+      form.querySelector(".dtext").textContent = v ? `${v.replaceAll("-", "/")}(${"日月火水木金土"[new Date(`${v}T00:00:00`).getDay()]})` : "未設定";
+    };
+    syncDate();
+    f.playDate.addEventListener("input", syncDate);
+    f.playDate.addEventListener("change", syncDate);
+    // PCでは日付欄の文字の部分を押しても選択が開かないので、押したら開く
+    f.playDate.addEventListener("click", () => {
+      try {
+        f.playDate.showPicker();
+      } catch {}
+    });
     f.minutes.value = String(r.minutes);
     f.isPrivate.checked = r.isPrivate;
     f.spoiler.checked = r.spoiler;
