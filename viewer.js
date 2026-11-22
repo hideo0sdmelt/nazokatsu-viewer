@@ -12,8 +12,8 @@
   const root = host.attachShadow({ mode: "open" });
   root.innerHTML = `<style>
 *{box-sizing:border-box}
-.root{--bg:#f3f4f7;--card:#fff;--text:#1f2328;--sub:#667085;--line:#e0e3e8;--accent:#2457b8;--on:#fff;--chip:#eceff4;--check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.8 8.4l2.8 2.8 5.6-6.2' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,"Hiragino Sans",sans-serif}
-@media (prefers-color-scheme:dark){.root{--bg:#15171b;--card:#1f2228;--text:#e8eaed;--sub:#9aa3b0;--line:#323741;--accent:#7aa7ff;--on:#10131a;--chip:#2a2e36;--check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.8 8.4l2.8 2.8 5.6-6.2' fill='none' stroke='%2310131a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}}
+.root{--bg:#f3f4f7;--card:#fff;--text:#1f2328;--sub:#667085;--line:#e0e3e8;--accent:#2457b8;--on:#fff;--chip:#eceff4;--btn:#2457b8;--btn-on:#fff;--check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.8 8.4l2.8 2.8 5.6-6.2' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,"Hiragino Sans",sans-serif}
+@media (prefers-color-scheme:dark){.root{--bg:#15171b;--card:#1f2228;--text:#e8eaed;--sub:#9aa3b0;--line:#323741;--accent:#7aa7ff;--on:#10131a;--chip:#2a2e36;--btn:#3a68cf;--btn-on:#fff;--check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.8 8.4l2.8 2.8 5.6-6.2' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}}
 .top{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--line)}
 .top h1{margin:0;font-size:18px}
 .topbtns{display:flex;align-items:center;gap:4px}
@@ -74,8 +74,8 @@
 /* 絞り込みのチェックは、オンでチップ全体がレーベルのボタンと同じ色になるトグルにする（input は残して見た目だけ変える） */
 .chip{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px 0 10px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text);user-select:none;transition:background-color .15s,border-color .15s,color .15s}
 .chip input{appearance:none;-webkit-appearance:none;flex:none;width:18px;height:18px;margin:0;border:1.5px solid var(--sub);border-radius:50%;background:transparent center/14px 14px no-repeat;cursor:pointer;transition:border-color .15s}
-.chip:has(input:checked){background:var(--accent);border-color:var(--accent);color:var(--on)}
-.chip input:checked{border-color:var(--on);background-image:var(--check)}
+.chip:has(input:checked){background:var(--btn);border-color:var(--btn);color:var(--btn-on)}
+.chip input:checked{border-color:var(--btn-on);background-image:var(--check)}
 .chip:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
 .chip input:focus-visible{outline:none}
 .chip:has(input:disabled){opacity:.45;cursor:not-allowed}
@@ -103,6 +103,13 @@
 .tag.ng{background:#fde0e0;color:#a12a2a}
 .tag.priv{background:#e4e0f5;color:#4b3a9a}
 .tag.spoil{background:#ffe9cc;color:#9a5a00}
+/* ダークでは明るいパステルの地が一覧で一番目立ってしまうので、暗い地に明るい文字にする（編集の成功/失敗と同じ考え方） */
+@media (prefers-color-scheme:dark){
+.tag.ok{background:#1a2e22;color:#8fd0a6}
+.tag.ng{background:#33201f;color:#eba5a5}
+.tag.priv{background:#262042;color:#b9adf0}
+.tag.spoil{background:#33270f;color:#f0c27a}
+}
 .review{white-space:pre-wrap;margin:10px 0 0;font-size:15px;line-height:1.6;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .card.open .review{display:block;-webkit-line-clamp:unset}
 .memo{margin:10px 0 0;padding:6px 10px;border-left:3px solid #4b3a9a;border-radius:4px;background:var(--chip)}
@@ -119,7 +126,7 @@
 @media (max-width:640px){.edit .actions,.memo-edit .actions{margin:0 -10px -8px;padding:8px 10px calc(8px + env(safe-area-inset-bottom))}}
 .memo-edit .actions{display:flex;gap:10px}
 .memo-edit .actions button{flex:1;height:46px;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text)}
-.memo-edit .actions .save{background:var(--accent);color:var(--on);border:0;font-weight:700}
+.memo-edit .actions .save{background:var(--btn);color:var(--btn-on);border:0;font-weight:700}
 .card.long{cursor:pointer}
 .card.long::after{content:"…続き ▾";position:absolute;right:14px;bottom:12px;padding-left:36px;font-size:12px;line-height:24px;color:var(--sub);background:linear-gradient(to right,transparent,var(--card) 32px)}
 .card.long.open::after{content:"たたむ ▴";position:static;display:block;padding:0;text-align:right;line-height:1.6;background:none}
@@ -152,7 +159,7 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 /* 編集フォームの非公開・ネタバレはスイッチにする */
 .edit label.chk{flex-direction:row;align-items:center;gap:10px;font-size:15px;color:var(--text);cursor:pointer;user-select:none}
 .edit label.chk input{appearance:none;-webkit-appearance:none;flex:none;width:42px;height:24px;margin:0;border-radius:12px;background:radial-gradient(circle,#fff 0 8.5px,transparent 9px) 2px 50%/20px 20px no-repeat var(--line);box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);cursor:pointer;transition:background-position .18s,background-color .18s}
-.edit label.chk input:checked{background-color:var(--accent);background-position:20px 50%}
+.edit label.chk input:checked{background-color:var(--btn);background-position:20px 50%}
 .edit label.chk input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .edit .wide{grid-column:1/-1}
 /* 満足度は★、難易度と成功/失敗はボタンを並べ、1回のタップで選べるようにする */
@@ -180,7 +187,7 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 .edit .pick .x{flex:none;white-space:nowrap;height:26px;padding:0 10px;margin-left:auto;font-size:12px;border:1px solid var(--line);border-radius:13px;background:var(--card);color:var(--sub)}
 .edit .pick .x[hidden]{display:none}
 .segs button{min-width:44px;height:38px;padding:0 12px;font-size:15px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text)}
-.segs button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on);font-weight:700}
+.segs button[aria-pressed=true]{background:var(--btn);border-color:var(--btn);color:var(--btn-on);font-weight:700}
 /* 成功/失敗は、カードの札と同じ系統の色を控えめに使う（赤が「エラー」や「削除」に見えないよう、地と枠は薄く）。
    色を弱めたぶん、選んだものには ✓ を付けて分かるようにする */
 [data-pick=result] .segs button[aria-pressed=true]{font-weight:600}
@@ -195,8 +202,9 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 .edit textarea{min-height:100px;line-height:1.5;resize:vertical}
 .edit .actions{grid-column:1/-1;display:flex;gap:10px}
 .edit .actions button{flex:1;height:46px;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text)}
-.edit .actions .save{background:var(--accent);color:var(--on);border:0;font-weight:700}
+.edit .actions .save{background:var(--btn);color:var(--btn-on);border:0;font-weight:700}
 .edit .actions .del{flex:none;padding:0 16px;color:#c0392b;border-color:#c0392b}
+@media (prefers-color-scheme:dark){.edit .actions .del{color:#f08a80;border-color:#8a3a33}}
 /* 確認・お知らせ・入力のシート。PCは中央、スマホは下から出す */
 .dlg-back{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(15,18,25,.45);animation:fade .15s}
 .dlg-back[hidden]{display:none}
@@ -215,7 +223,7 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 .dlg input{width:100%;height:46px;margin-top:12px;padding:0 12px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text)}
 .dlg .acts{display:flex;gap:10px;margin-top:18px}
 .dlg .acts button{flex:1;height:46px;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text)}
-.dlg .acts .ok{border:0;background:var(--accent);color:var(--on);font-weight:700}
+.dlg .acts .ok{border:0;background:var(--btn);color:var(--btn-on);font-weight:700}
 .dlg .acts .ok.danger{background:#d93025;color:#fff}
 @media (max-width:640px){
 .dlg-back{align-items:flex-end;padding:0}
@@ -296,7 +304,9 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       const acts = el("div", "acts");
       const cancelBtn = cancel ? el("button", "cancel", cancel) : null;
       const okBtn = el("button", danger ? "ok danger" : "ok", ok);
-      for (const b of [cancelBtn, okBtn]) {
+      // 取り返しのつかない操作では「削除する」を左、キャンセルを右にする。
+      // 削除ボタン（右下）を連打したとき、2回目が確認の「削除する」に当たらないように
+      for (const b of danger ? [okBtn, cancelBtn] : [cancelBtn, okBtn]) {
         if (!b) continue;
         b.type = "button";
         acts.append(b);
