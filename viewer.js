@@ -335,6 +335,8 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     requestClose();
   };
   const setMenu = (open) => {
+    // 開くたびに「何分前」を数え直す
+    if (open && fetchedAt) $("fetchedAt").textContent = fetchedLabel();
     $("menu").hidden = !open;
     $("menuBtn").setAttribute("aria-expanded", String(open));
   };
@@ -484,6 +486,18 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     photos: (r.allPhotoUrls ?? []).filter((u) => u?.includes("supabase.co/storage")),
   });
   let fetchedAt = null;
+  // 取得時刻は「何分前」を添えて出す。アプリを裏に残していると、古いデータを見ていることに気づきにくいため。
+  // 今日でなければ日付も付ける
+  const agoText = () => {
+    const min = Math.floor((Date.now() - fetchedAt) / 60e3);
+    return min < 1 ? "たった今" : min < 60 ? `${min}分前` : min < 1440 ? `${Math.floor(min / 60)}時間前` : `${Math.floor(min / 1440)}日前`;
+  };
+  const fetchedLabel = () => {
+    const today = fetchedAt.toDateString() === new Date().toDateString();
+    const hm = fetchedAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+    const at = today ? hm : `${fetchedAt.getMonth() + 1}/${fetchedAt.getDate()} ${hm}`;
+    return `${at} に取得（${agoText()}・${data.length}件）`;
+  };
   const fetchAll = async (auth) => {
     const all = [];
     for (let page = 1; ; page++) {
@@ -1145,7 +1159,11 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     // 長いかどうか（.long）は表示後に markLong で実際に2行に収まらないかを測って決める
     if (r.review || memo) {
       el.addEventListener("click", (e) => {
-        if (el.classList.contains("long") && !e.target.closest("a, button")) el.classList.toggle("open");
+        if (!el.classList.contains("long") || e.target.closest("a, button")) return;
+        // 文字を選んだ（コピーしようとした）だけのときは開閉しない
+        const sel = root.getSelection?.() ?? document.getSelection();
+        if (sel && !sel.isCollapsed && sel.toString().trim()) return;
+        el.classList.toggle("open");
       });
     }
     return el;
@@ -1374,7 +1392,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       words.length > 1
         ? `${words.map((w) => `「${w}」`).join("")}をすべて含む ${hits} / ${data.length} 件`
         : `${hits} / ${data.length} 件`;
-    $("fetchedAt").textContent = fetchedAt ? `${fetchedAt.toLocaleTimeString("ja-JP")} に取得（${data.length}件）` : "";
+    $("fetchedAt").textContent = fetchedAt ? fetchedLabel() : "";
     if (words.length > 1) rememberAndUsed();
     // スマホで絞り込みを畳んでいても、効いている条件の数が分かるようにする
     $("memoOnlyChip").hidden = memoState !== "ok";
@@ -1474,11 +1492,39 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   };
   for (const type of ["focus", "blur", "input"]) $("q").addEventListener(type, syncHint);
   // 幅640px以下（スマホ）では絞り込み条件を畳み、一覧を広く見せる。PCでは常に表示（ボタンも出ない）
-  $("toggle").addEventListener("click", () => {
-    const bar = root.querySelector(".bar");
-    bar.classList.toggle("show");
-    $("toggle").setAttribute("aria-expanded", String(bar.classList.contains("show")));
-  });
+  const bar = root.querySelector(".bar");
+  let openedAt = 0;
+  const setFilters = (open) => {
+    bar.classList.toggle("show", open);
+    $("toggle").setAttribute("aria-expanded", String(open));
+    openedAt = host.scrollTop;
+  };
+  $("toggle").addEventListener("click", () => setFilters(!bar.classList.contains("show")));
+  // 開いた絞り込みは上に貼り付いて一覧の半分ほどを覆うので、開いた位置から一覧を下へ読み進めたら畳む
+  // （条件の数はボタンに残る）。描き直しで一覧が縮んで上に戻ったときは畳まない
+  host.addEventListener(
+    "scroll",
+    () => {
+      if (!bar.classList.contains("show")) return;
+      if (host.scrollTop < openedAt) openedAt = host.scrollTop;
+      else if (host.scrollTop - openedAt > 48) {
+        // 貼り付いている間に畳むと、縮んだ分だけ一覧が上に跳ぶので、その分スクロールを戻して見ている所を保つ
+        const h = bar.offsetHeight;
+        setFilters(false);
+        host.scrollTop -= h - bar.offsetHeight;
+        openedAt = host.scrollTop;
+      }
+    },
+    { passive: true },
+  );
+  // 裏に残したアプリに戻ったとき、取得から1時間以上たっていれば知らせる
+  const onVisible = () => {
+    if (document.visibilityState === "visible" && host.isConnected && fetchedAt && Date.now() - fetchedAt > 3600e3) {
+      toast(`${agoText()}に取得した一覧です。最新にするにはページを再読み込みしてください`);
+    }
+  };
+  document.addEventListener("visibilitychange", onVisible);
+  cleanups.push(() => document.removeEventListener("visibilitychange", onVisible));
   // 集計タブ。年（参加日の年）か全期間を選び、件数と月ごとの推移・レーベルごとの成功率・満足度の高い順を出す。
   // 一覧の絞り込みとは別で、効かせるのは「公演型のみ」だけ。ナゾ活1件を作品1つとして数える（1作品に1件しか作れないため）
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
