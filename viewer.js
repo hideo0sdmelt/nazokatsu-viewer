@@ -61,7 +61,8 @@
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg[hidden]{display:none}
 .seg button{height:38px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text)}
-.seg button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on)}
+/* 選んだレーベルは、塗りつぶさず薄い色と枠で示す（条件のチップとも見分けられる） */
+.seg button[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 14%,var(--card));border-color:var(--accent);color:var(--accent)}
 .seg button span{margin-left:4px;font-size:12px;opacity:.75}
 /* 絞り込みのチェックは、オンでチップ全体がレーベルのボタンと同じ色になるトグルにする（input は残して見た目だけ変える） */
 .chip{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px 0 10px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text);user-select:none;transition:background-color .15s,border-color .15s,color .15s}
@@ -103,7 +104,7 @@
 .card.open .memo-text{display:block;-webkit-line-clamp:unset}
 .btns{flex:none;display:flex;gap:6px}
 .memo-edit{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-.memo-edit textarea{min-height:160px;font-size:16px;line-height:1.5;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
+.memo-edit textarea{min-height:100px;resize:vertical;font-size:16px;line-height:1.5;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
 .memo-edit .note{font-size:12px;color:var(--sub)}
 .memo-edit .actions{display:flex;gap:10px}
 .memo-edit .actions button{flex:1;height:46px;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text)}
@@ -121,6 +122,7 @@
 .review{margin-top:5px;font-size:14px;line-height:1.5}
 .card.long::after{right:10px;bottom:8px;line-height:21px}
 .edit-btn{height:26px;margin:-3px 0;padding:0 8px}
+.head{margin-bottom:6px}
 .countrow{margin:4px 2px 6px}
 }
 button,select,.chip{cursor:pointer}
@@ -135,11 +137,6 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 .edit-btn{flex:none;height:30px;padding:0 10px;font-size:13px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--accent)}
 .edit{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
 .edit label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--sub)}
-/* 参加日: 表示は自前の「2026/11/01(日)」にし、上に透明な日付欄を重ねて押すと日付の選択を開く */
-.datebox{position:relative;display:flex;align-items:center;gap:6px;padding:8px;font-size:16px;line-height:1.2;color:var(--text);border:1px solid var(--line);border-radius:8px;background:var(--bg);cursor:pointer}
-.datebox:focus-within{outline:2px solid var(--accent);outline-offset:1px}
-.datebox .dicon{margin-left:auto;font-size:12px;color:var(--sub)}
-.edit .datebox input{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer}
 .edit input[type=date],.edit select,.edit textarea{font-size:16px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text)}
 /* 編集フォームの非公開・ネタバレはスイッチにする */
 .edit label.chk{flex-direction:row;align-items:center;gap:10px;font-size:15px;color:var(--text);cursor:pointer;user-select:none}
@@ -173,8 +170,11 @@ button:disabled,select:disabled{cursor:wait;opacity:.6}
 .edit .pick .x[hidden]{display:none}
 .segs button{min-width:44px;height:38px;padding:0 12px;font-size:15px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text)}
 .segs button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on);font-weight:700}
+/* 成功/失敗は、カードの札と同じ色にする */
+[data-pick=result] .segs button[data-v=成功][aria-pressed=true]{background:#d9f2e1;border-color:#14663a;color:#14663a}
+[data-pick=result] .segs button[data-v=失敗][aria-pressed=true]{background:#fde0e0;border-color:#a12a2a;color:#a12a2a}
 .edit .chks{grid-column:1/-1;display:flex;gap:24px}
-.edit textarea{min-height:160px;line-height:1.5}
+.edit textarea{min-height:100px;line-height:1.5;resize:vertical}
 .edit .actions{grid-column:1/-1;display:flex;gap:10px}
 .edit .actions button{flex:1;height:46px;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text)}
 .edit .actions .save{background:var(--accent);color:var(--on);border:0;font-weight:700}
@@ -585,6 +585,16 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   };
   // プレイ時間は確認でもカードと同じ 1h30m の形で見せる
   const showField = (k, v) => (k === "minutes" && v !== "" ? minuteLabel(Number(v)) : show(v));
+  // 感想・メモの入力欄は4行ほどで始め、書いてある分・書いた分だけ伸ばす（画面の6割まで。それ以上は欄の中でスクロール）
+  const autosize = (ta) => {
+    const fit = () => {
+      ta.style.height = "auto";
+      ta.style.height = `${Math.min(ta.scrollHeight + 2, Math.round(innerHeight * 0.6))}px`;
+    };
+    ta.addEventListener("input", fit);
+    // 描画されて大きさが測れるようになってから合わせる
+    requestAnimationFrame(fit);
+  };
   let editingId = null;
   const toast = (msg) => {
     $("toast").textContent = msg;
@@ -688,7 +698,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     form.className = "edit";
     const unset = ["", "未設定"];
     form.innerHTML = `
-<label>参加日<span class="datebox"><span class="dtext"></span><span class="dicon" aria-hidden="true">▾</span><input name="playDate" type="date" required></span></label>
+<label>参加日<input name="playDate" type="date" required></label>
 <label>プレイ時間<select name="minutes">${options([unset, ...Array.from({ length: 48 }, (_, i) => [15 * (i + 1), minuteLabel(15 * (i + 1))])], r.minutes)}</select></label>
 <div class="pick" data-pick="satisfaction"></div>
 <div class="pick" data-pick="difficulty"></div>
@@ -786,23 +796,11 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     segPicker("result", "成功/失敗", ["成功", "失敗"]);
     const f = form.elements;
     f.playDate.value = r.playDate;
-    const syncDate = () => {
-      const v = f.playDate.value;
-      form.querySelector(".dtext").textContent = v ? `${v.replaceAll("-", "/")}(${"日月火水木金土"[new Date(`${v}T00:00:00`).getDay()]})` : "未設定";
-    };
-    syncDate();
-    f.playDate.addEventListener("input", syncDate);
-    f.playDate.addEventListener("change", syncDate);
-    // PCでは日付欄の文字の部分を押しても選択が開かないので、押したら開く
-    f.playDate.addEventListener("click", () => {
-      try {
-        f.playDate.showPicker();
-      } catch {}
-    });
     f.minutes.value = String(r.minutes);
     f.isPrivate.checked = r.isPrivate;
     f.spoiler.checked = r.spoiler;
     f.review.value = r.review;
+    autosize(f.review);
     const saveBtn = form.querySelector(".save");
     const overlay = form.querySelector(".saving");
     const setBusy = (on, text = "", spinSave = true) => {
@@ -862,6 +860,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
 <div class="saving" hidden><div class="spin"></div><span>保存中…</span></div>`;
     const before = memoOf(r);
     form.elements.memo.value = before;
+    autosize(form.elements.memo);
     const overlay = form.querySelector(".saving");
     const setBusy = (on) => {
       for (const c of form.querySelectorAll("textarea,button")) c.disabled = on;
