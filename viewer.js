@@ -54,7 +54,8 @@
 .flabel{width:100%}
 }
 .filters select{height:38px;font-size:14px;padding:0 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text)}
-.countrow .left{display:flex;align-items:center;gap:8px;min-width:0}
+.countrow .left{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-width:0}
+#count{white-space:nowrap}
 .sortbox{flex:none;display:flex;align-items:center;gap:2px;font-size:12px;color:var(--sub)}
 .sortbox select{height:30px;padding:0 4px;font-size:13px;font-weight:600;border:0;border-radius:6px;background:transparent;color:var(--text)}
 @media (hover:hover){.sortbox select:hover{background:var(--chip)}}
@@ -85,6 +86,8 @@
 #count{font-size:13px;color:var(--sub)}
 .clear{flex:none;height:28px;padding:0 12px;font-size:13px;font-weight:600;border:0;border-radius:14px;background:var(--chip);color:var(--accent)}
 .clear[hidden]{display:none}
+.jump{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--accent);color:var(--on)}
+.jump::after{content:" ✕";font-weight:400}
 .empty{padding:40px 16px;text-align:center;color:var(--sub);font-size:15px}
 .empty p{margin:0 0 14px}
 .empty .clear{height:36px;padding:0 16px;font-size:14px;border-radius:18px;margin:0 4px}
@@ -142,6 +145,65 @@
 .edit-btn{height:26px;margin:-3px 0;padding:0 8px}
 .head{margin-bottom:6px}
 .countrow{margin:4px 2px 6px}
+}
+/* 一覧と集計のタブ。上のバーの高さを変えないよう、見出しの横に置く */
+.tl{display:flex;align-items:center;gap:12px;min-width:0}
+.tabs{display:flex;gap:2px;padding:3px;border-radius:10px;background:var(--chip)}
+.tabs[hidden]{display:none}
+.tabs button{height:32px;padding:0 14px;font-size:14px;font-weight:600;border:0;border-radius:8px;background:transparent;color:var(--sub)}
+.tabs button[aria-selected=true]{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.stats{padding-top:12px}
+.st-ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px}
+.sec{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.sec h2{margin:0 0 10px;font-size:15px}
+.sec .note{margin:8px 0 0;font-size:12px;color:var(--sub)}
+.sec .none{margin:0;font-size:14px;color:var(--sub)}
+.todo{border-left:4px solid #e0a040}
+.todo h2{margin-bottom:4px}
+.todo-msg{margin:0;font-size:14px;line-height:1.5;color:var(--sub)}
+.todo .more{margin:10px 0 0}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{padding:8px 10px;border-radius:10px;background:var(--bg)}
+.tile .k{font-size:12px;color:var(--sub)}
+.tile .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.tile .s{font-size:12px;color:var(--sub)}
+/* 月ごとの棒。数字は一番多い月だけに付け、他はホバーかタップで出す */
+.chart{display:flex;align-items:flex-end;gap:2px;height:150px;margin-top:14px;padding-top:20px;border-bottom:1px solid var(--line)}
+.col{position:relative;flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;outline:none}
+.col .n{position:absolute;left:50%;transform:translateX(-50%);font-size:11px;font-weight:700;white-space:nowrap;color:var(--text);visibility:hidden}
+.col{cursor:pointer}
+.col.peak .n,.col:hover .n,.col:focus .n,.col.sel .n{visibility:visible}
+.barv{width:min(70%,30px);border-radius:4px 4px 0 0;background:var(--accent)}
+.col:hover .barv,.col:focus .barv{filter:brightness(1.15)}
+.col.sel .barv{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--accent)}
+.pickline{display:flex;align-items:center;gap:10px;min-height:32px;margin-top:8px;font-size:13px;color:var(--sub)}
+.pickline .clear{margin-left:auto}
+.ltable tr.go{cursor:pointer}
+@media (hover:hover){.ltable tr.go:hover td{background:var(--chip)}}
+.ltable tr.go:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.ltable .chev{width:1em;padding-left:0;text-align:right;font-size:18px;color:var(--sub)}
+.tile .d{margin-top:2px;font-size:12px;color:var(--sub)}
+.axis{display:flex;gap:2px;margin-top:4px}
+.axis span{flex:1;text-align:center;font-size:11px;color:var(--sub)}
+.ltable{width:100%;border-collapse:collapse;font-size:14px}
+.ltable th{padding:4px;font-size:12px;font-weight:600;text-align:left;color:var(--sub)}
+.ltable td{padding:7px 4px;border-top:1px solid var(--line);vertical-align:middle}
+.ltable .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ltable th.num{text-align:right}
+.ltable .sub{color:var(--sub);font-size:12px}
+.more{display:block;margin:8px auto 0;height:32px;padding:0 14px;font-size:13px;font-weight:600;border:0;border-radius:16px;background:var(--chip);color:var(--accent)}
+.best{margin:0;padding:0;list-style:none}
+.best li{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.best li:first-child{border-top:0;padding-top:0}
+.best .rk{flex:none;width:1.6em;text-align:right;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums}
+.best .bt{min-width:0}
+.best a{display:block;margin-bottom:2px;font-size:15px;font-weight:600;line-height:1.4;color:var(--accent);text-decoration:none}
+@media (max-width:640px){
+.tl{gap:8px}
+.tabs button{height:26px;padding:0 10px;font-size:13px}
+.tile{padding:6px 8px}
+.tile .v{font-size:20px}
+.sec{padding:10px 12px}
 }
 button,select,.chip{cursor:pointer}
 @media (hover:hover){button:hover{filter:brightness(.93)}}
@@ -239,23 +301,38 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
 @keyframes s{to{transform:rotate(360deg)}}
 </style>
 <div class="root">
-<div class="top"><h1>自分のナゾ活</h1><div class="topbtns"><div class="menuwrap"><button id="menuBtn" class="icon" type="button" aria-label="メニュー" aria-haspopup="true" aria-expanded="false">⋯</button><div id="menu" class="menu" hidden><div id="fetchedAt" class="menu-info">取得中…</div><button id="memoSet" type="button">メモの設定（トークン）</button></div></div><button id="close" class="icon" type="button" aria-label="閉じる" title="閉じる（Esc）">✕</button></div></div>
+<div class="top"><div class="tl"><h1>自分のナゾ活</h1><div id="tabs" class="tabs" role="tablist" hidden><button id="tabList" type="button" role="tab" aria-selected="true">一覧</button><button id="tabStats" type="button" role="tab" aria-selected="false">集計</button></div></div><div class="topbtns"><div class="menuwrap"><button id="menuBtn" class="icon" type="button" aria-label="メニュー" aria-haspopup="true" aria-expanded="false">⋯</button><div id="menu" class="menu" hidden><div id="fetchedAt" class="menu-info">取得中…</div><button id="memoSet" type="button">メモの設定（トークン）</button></div></div><button id="close" class="icon" type="button" aria-label="閉じる" title="閉じる（Esc）">✕</button></div></div>
 <div id="main"><div class="loading"><div class="spin"></div>ナゾ活を取得中…</div></div>
 <div id="dlg" class="dlg-back" hidden></div>
 <div id="toast" hidden></div>
 </div>`;
   const $ = (id) => root.getElementById(id);
+  // 閉じるときに戻すため、開く前のページのスクロール設定を覚えておく
+  const prevOverflow = document.body.style.overflow;
+  const cleanups = [];
   const close = () => {
     host.remove();
-    document.body.style.overflow = "";
+    document.body.style.overflow = prevOverflow;
     document.removeEventListener("keydown", onKey);
+    for (const f of cleanups) f();
   };
-  // Esc は、開いているシート → メニュー → ビューアの順に1つずつ閉じる
+  // 編集中（ナゾ活・メモ）のフォーム。一覧を描き直しても同じ要素を使い回し、書きかけを消さない。
+  // { key: "edit:<id>" か "memo:<id>", el, isDirty }
+  let liveForm = null;
+  // 保存していない変更があれば、捨ててよいか確かめる。変更がなければそのまま true
+  const confirmDiscard = async (what = "破棄する") =>
+    !liveForm?.isDirty() ||
+    dialog({ title: "保存していない変更があります", message: "編集中の内容は失われます。", ok: what, danger: true });
+  const requestClose = async () => {
+    if (await confirmDiscard("破棄して閉じる")) close();
+  };
+  // Esc は、開いているシート → メニュー → ビューアの順に1つずつ閉じる。
+  // 日本語入力の変換を Esc で取り消したときは何もしない
   const onKey = (e) => {
-    if (e.key !== "Escape") return;
+    if (e.key !== "Escape" || e.isComposing || e.keyCode === 229) return;
     if (closeDialog) return closeDialog();
     if (!$("menu").hidden) return setMenu(false);
-    close();
+    requestClose();
   };
   const setMenu = (open) => {
     $("menu").hidden = !open;
@@ -330,11 +407,22 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       (field ?? (danger ? cancelBtn : okBtn))?.focus();
     });
   const notify = (message, title = "") => dialog({ title, message, cancel: null });
+  // 読み込めなかったときは、画面内に理由と再読み込みのボタンを出す（標準のダイアログを止めた端末でも分かるように）
   const fail = (msg) => {
-    close();
-    alert(msg);
+    const box = document.createElement("div");
+    box.className = "empty fail";
+    const p = document.createElement("p");
+    p.textContent = msg;
+    const reload = document.createElement("button");
+    reload.type = "button";
+    reload.className = "clear";
+    reload.textContent = "ページを再読み込み";
+    reload.addEventListener("click", () => location.reload());
+    box.append(p, reload);
+    $("main").replaceChildren(box);
+    $("fetchedAt").textContent = "取得できませんでした";
   };
-  $("close").addEventListener("click", close);
+  $("close").addEventListener("click", requestClose);
   document.addEventListener("keydown", onKey);
   document.body.append(host);
   document.body.style.overflow = "hidden";
@@ -349,13 +437,31 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
         req.onsuccess = () => resolve(req.result);
       };
     });
+  // ログイン用トークンは約1時間で切れる。切れていたら（残り1分を切っていたら）Firebase SDK と同じく
+  // refreshToken で取り直し、再読み込みせずに続けられるようにする。取り直したものはこのビューアの中だけで使う
+  let refreshed = null;
+  const authOf = (uid, token) => ({ uid, headers: { authorization: `Bearer ${token}` } });
   const getAuth = async () => {
-    const user = (await idb((s) => s.getAll())).map((r) => r.value).find((v) => v?.stsTokenManager?.accessToken);
+    const recs = await idb((s) => s.getAll());
+    const rec = recs.find((r) => r.value?.stsTokenManager?.accessToken);
+    const user = rec?.value;
     if (!user) throw new Error("ログインしていません。ログインしてから実行してください");
-    if (user.stsTokenManager.expirationTime < Date.now()) {
-      throw new Error("ログインの有効期限が切れています。ページを再読み込みしてから実行してください");
-    }
-    return { uid: user.uid, headers: { authorization: `Bearer ${user.stsTokenManager.accessToken}` } };
+    const sts = user.stsTokenManager;
+    if (sts.expirationTime - 60e3 > Date.now()) return authOf(user.uid, sts.accessToken);
+    if (refreshed?.uid === user.uid && refreshed.exp - 60e3 > Date.now()) return authOf(user.uid, refreshed.token);
+    const expired = new Error("ログインの有効期限が切れています。ページを再読み込みしてから実行してください");
+    // apiKey は利用者の JSON にあり、無ければ IndexedDB のキー（firebase:authUser:<apiKey>:[DEFAULT]）から取る
+    const apiKey = user.apiKey ?? String(rec.fbase_key ?? "").split(":")[2];
+    if (!apiKey || !sts.refreshToken) throw expired;
+    const res = await fetch(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(apiKey)}`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: sts.refreshToken }),
+    }).catch(() => null);
+    const j = res?.ok ? await res.json().catch(() => null) : null;
+    if (!j?.id_token) throw expired;
+    refreshed = { uid: user.uid, token: j.id_token, exp: Date.now() + Number(j.expires_in || 3600) * 1000 };
+    return authOf(user.uid, refreshed.token);
   };
   // 作品ID → レーベル（ナゾヒロバの作品の maker 欄）。編集後に取り直したときも使えるよう取得結果を残しておく
   const makers = new Map();
@@ -461,7 +567,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   const memoError = (res, what) =>
     new Error(
       res.status === 401
-        ? "メモのトークンが無効か期限切れです。「メモ設定」で入れ直してください"
+        ? "メモのトークンが無効か期限切れです。右上の ⋯ →「メモの設定」で入れ直してください"
         : res.status === 403 || res.status === 404
           ? `メモの${what}に失敗しました（${res.status}）。トークンの対象リポジトリと権限（Contents: Read and write）を確かめてください`
           : `メモの${what}に失敗しました（${res.status}）`,
@@ -532,10 +638,10 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   await loadMemos();
   if (!host.isConnected) return;
 
-  $("main").innerHTML = `<div class="wrap">
+  $("main").innerHTML = `<div id="listView" class="wrap">
 <div class="bar">
   <div class="search">
-    <input id="q" type="search" placeholder="作品名・感想を検索">
+    <input id="q" type="search" placeholder="作品名・レーベル・感想・メモを検索">
     <button id="toggle" type="button" aria-expanded="false">絞り込み</button>
     <div id="qhint" hidden>スペースで区切ると、すべての言葉を含むものに絞り込みます</div>
   </div>
@@ -560,7 +666,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     </div>
   </div>
 </div>
-<div class="countrow"><div class="left"><div id="count"></div><button id="clear" class="clear" type="button" hidden>条件をクリア</button></div>
+<div class="countrow"><div class="left"><div id="count"></div><button id="jump" class="clear jump" type="button" title="この絞り込みを外す" hidden></button><button id="clear" class="clear" type="button" hidden>条件をクリア</button></div>
   <label class="sortbox">並び順<select id="sort">
     <option value="date-desc">参加日 新しい順</option>
     <option value="date-asc">参加日 古い順</option>
@@ -572,15 +678,17 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   </select></label>
 </div>
 <div id="list"></div>
-</div>`;
+</div>
+<div id="stats" class="wrap stats" hidden></div>`;
   const num = (s) => (s === "" ? -1 : Number(s));
   const sorters = {
-    "date-desc": (a, b) => b.playDate.localeCompare(a.playDate),
-    "date-asc": (a, b) => a.playDate.localeCompare(b.playDate),
+    // 参加日・満足度が空のものは、どちらの向きでも最後に回す
+    "date-desc": (a, b) => !a.playDate - !b.playDate || b.playDate.localeCompare(a.playDate),
+    "date-asc": (a, b) => !a.playDate - !b.playDate || a.playDate.localeCompare(b.playDate),
     "posted-desc": (a, b) => a.seq - b.seq,
     "posted-asc": (a, b) => b.seq - a.seq,
-    "sat-desc": (a, b) => num(b.satisfaction) - num(a.satisfaction),
-    "sat-asc": (a, b) => num(a.satisfaction) - num(b.satisfaction),
+    "sat-desc": (a, b) => (a.satisfaction === "") - (b.satisfaction === "") || num(b.satisfaction) - num(a.satisfaction),
+    "sat-asc": (a, b) => (a.satisfaction === "") - (b.satisfaction === "") || num(a.satisfaction) - num(b.satisfaction),
     title: (a, b) => a.title.localeCompare(b.title, "ja"),
   };
   const highlight = (parent, text, words) => {
@@ -624,10 +732,13 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     requestAnimationFrame(fit);
   };
   let editingId = null;
+  // 続けて出したときに、前のタイマーで次のお知らせが早く消えないよう、出すたびに数え直す
+  let toastTimer;
   const toast = (msg) => {
     $("toast").textContent = msg;
     $("toast").hidden = false;
-    setTimeout(() => ($("toast").hidden = true), 3500);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => ($("toast").hidden = true), 3500);
   };
   // 変更点だけを確認してPATCHし、取得し直して反映を検証する
   const save = async (r, next, setBusy) => {
@@ -847,19 +958,20 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
         setBusy(false);
       }
     });
+    const current = () => ({
+      playDate: f.playDate.value,
+      satisfaction: f.satisfaction.value,
+      difficulty: f.difficulty.value,
+      minutes: f.minutes.value,
+      result: f.result.value,
+      isPrivate: f.isPrivate.checked,
+      spoiler: f.spoiler.checked,
+      review: f.review.value.replaceAll("\r\n", "\n"),
+    });
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       try {
-        await save(r, {
-          playDate: f.playDate.value,
-          satisfaction: f.satisfaction.value,
-          difficulty: f.difficulty.value,
-          minutes: f.minutes.value,
-          result: f.result.value,
-          isPrivate: f.isPrivate.checked,
-          spoiler: f.spoiler.checked,
-          review: f.review.value.replaceAll("\r\n", "\n"),
-        }, setBusy);
+        await save(r, current(), setBusy);
       } catch (err) {
         notify(err.message, "エラー");
       } finally {
@@ -871,7 +983,11 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       render();
     });
     el.append(h, form);
-    return el;
+    const isDirty = () => {
+      const next = current();
+      return FIELDS.some(([k]) => String(next[k]) !== String(r[k]));
+    };
+    return { el, isDirty };
   };
   let memoEditingId = null;
   const memoOf = (r) => (memoState === "ok" ? memos[r.mysteryId]?.text ?? "" : "");
@@ -919,11 +1035,25 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       render();
     });
     el.append(h, form);
-    return el;
+    return { el, isDirty: () => form.elements.memo.value.replaceAll("\r\n", "\n") !== before };
+  };
+  // 編集中のカードは、描き直しのたびに作り直さず同じフォームを返す（検索や絞り込みを触っても書きかけが残る）
+  const formKey = () => (editingId ? `edit:${editingId}` : memoEditingId ? `memo:${memoEditingId}` : null);
+  // 別のカードの編集に移る。今のフォームに保存していない変更があれば確かめる
+  const startEditing = async (kind, id) => {
+    if (formKey() === `${kind}:${id}`) return;
+    if (!(await confirmDiscard())) return;
+    editingId = kind === "edit" ? id : null;
+    memoEditingId = kind === "memo" ? id : null;
+    render();
+    $("list").querySelector(".editing")?.scrollIntoView({ block: "nearest" });
   };
   const card = (r, words) => {
-    if (r.id === editingId) return editCard(r);
-    if (r.id === memoEditingId) return memoCard(r);
+    if (r.id === editingId || r.id === memoEditingId) {
+      const key = formKey();
+      if (liveForm?.key !== key) liveForm = { key, ...(r.id === editingId ? editCard(r) : memoCard(r)) };
+      return liveForm.el;
+    }
     const el = document.createElement("article");
     el.className = "card";
     const head = document.createElement("div");
@@ -939,12 +1069,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     editBtn.type = "button";
     editBtn.className = "edit-btn";
     editBtn.textContent = "編集";
-    editBtn.addEventListener("click", () => {
-      editingId = r.id;
-      memoEditingId = null;
-      render();
-      $("list").querySelector(".editing")?.scrollIntoView({ block: "nearest" });
-    });
+    editBtn.addEventListener("click", () => startEditing("edit", r.id));
     const btns = document.createElement("div");
     btns.className = "btns";
     if (memoState === "ok" && r.mysteryId) {
@@ -952,12 +1077,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       memoBtn.type = "button";
       memoBtn.className = "edit-btn memo-btn";
       memoBtn.textContent = "メモ";
-      memoBtn.addEventListener("click", () => {
-        memoEditingId = r.id;
-        editingId = null;
-        render();
-        $("list").querySelector(".editing")?.scrollIntoView({ block: "nearest" });
-      });
+      memoBtn.addEventListener("click", () => startEditing("memo", r.id));
       btns.append(memoBtn);
     }
     btns.append(editBtn);
@@ -1032,23 +1152,26 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   };
   // 文字数や改行の有無ではなく、折りたたんだ状態で実際に切れているカードだけに「タップで全文を表示」を付ける。
   // openAll（検索中）はヒット箇所が隠れないよう、切れるカードを最初から開く
+  // 書き換えと測定を交互にするとカードごとにレイアウトをやり直すので、たたむ → まとめて測る → まとめて付ける、の順にする
   const markLong = (openAll) => {
-    for (const el of $("list").querySelectorAll(".card")) {
-      const ps = [...el.querySelectorAll(".review, .memo-text")];
-      if (!ps.length) continue;
-      const wasOpen = el.classList.contains("open");
-      el.classList.remove("open");
-      const long = ps.some((p) => p.scrollHeight > p.clientHeight + 1);
-      el.classList.toggle("long", long);
-      if (long && (wasOpen || openAll)) el.classList.add("open");
+    const cards = [...$("list").querySelectorAll(".card")]
+      .map((el) => ({ el, ps: [...el.querySelectorAll(".review, .memo-text")], wasOpen: el.classList.contains("open") }))
+      .filter((c) => c.ps.length);
+    for (const c of cards) c.el.classList.remove("open");
+    for (const c of cards) c.long = c.ps.some((p) => p.scrollHeight > p.clientHeight + 1);
+    for (const c of cards) {
+      c.el.classList.toggle("long", c.long);
+      if (c.long && (c.wasOpen || openAll)) c.el.classList.add("open");
     }
   };
-  // 画面の向きや幅が変わると切れる行数も変わるので測り直す
+  // 画面の向きや幅が変わると切れる行数も変わるので測り直す（閉じたら購読をやめる）
   let resizeTimer;
-  addEventListener("resize", () => {
+  const onResize = () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => host.isConnected && markLong(false), 150);
-  });
+  };
+  addEventListener("resize", onResize);
+  cleanups.push(() => removeEventListener("resize", onResize));
   // コラボ（「Tumbleweed,よだかのレコード」など）を、含まれる各レーベルに属させる。
   // maker 欄を区切りで語に分け、自分のナゾ活に単独で出てくるレーベルの語の並びを含んでいれば、そのレーベルにも入れる。
   // 「NAZO×NAZO劇団」「Toy×ボーズ」のような名前があるので、× は両側に空白があるときだけ区切りとみなす。
@@ -1132,8 +1255,16 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
         colorOf.set(m, c);
       }
     }
-    // 前回選んだボタンが今回の上位4つに無ければ外す
-    if (pickedMain && !mainMakers.includes(pickedMain)) pickedMain = "";
+    // 前回と今回で上位4つが入れ替わっていたら、選んだレーベルをボタンとセレクトボックスの間で移して絞り込みを保つ
+    let selValue = current;
+    if (current && mainMakers.includes(current)) {
+      pickedMain = current;
+      selValue = "";
+    }
+    if (pickedMain && !mainMakers.includes(pickedMain)) {
+      selValue = pickedMain;
+      pickedMain = "";
+    }
     $("mainMakers").replaceChildren(
       ...mainMakers.map((m) => {
         const b = document.createElement("button");
@@ -1156,7 +1287,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       .filter(([m]) => !mainMakers.includes(m))
       .map(([m, n]) => new Option(`${m || "不明"}（${n}）`, m || "-"));
     sel.replaceChildren(new Option(mainMakers.length ? "その他のレーベル" : "レーベル: すべて", ""), ...opts);
-    sel.value = [...sel.options].some((o) => o.value === current) ? current : "";
+    sel.value = [...sel.options].some((o) => o.value === selValue) ? selValue : "";
   };
   // 2語以上で検索したことがあるか。ナゾヒロバのページの localStorage に1件だけ残す（使えなければ毎回出す）
   const AND_USED_KEY = "nazokatsuViewerAndUsed";
@@ -1181,16 +1312,23 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       return {};
     }
   };
+  // 分類を取れずに「公演型のみ」を使えなかった回は、前回の選択を消さずに残す
+  let keepOnsite = false;
   const savePrefs = () => {
     try {
-      const checks = Object.fromEntries(FILTER_CHECKS.filter((id) => $(id).checked).map((id) => [id, true]));
+      const on = (id) => $(id).checked || (id === "onsite" && $(id).disabled && keepOnsite);
+      const checks = Object.fromEntries(FILTER_CHECKS.filter(on).map((id) => [id, true]));
       localStorage.setItem(PREFS_KEY, JSON.stringify({ sort: $("sort").value, result: $("result").value, maker: $("maker").value, pickedMain, checks }));
     } catch {}
   };
   // 「条件をクリア」で戻すもの。並び替えと検索欄はそのまま
   const FILTER_CHECKS = ["onsite", "priv", "withReview", "noDate", "noRating", "memoOnly"];
   const activeChecks = () => FILTER_CHECKS.filter((id) => $(id).checked && (id !== "memoOnly" || memoState === "ok"));
+  // 集計から飛んできたときの一時的な絞り込み（{ label, ids }）。覚えておかず、外すか「条件をクリア」で消える。
+  // ID で持つので、飛んだ先で編集して未入力が埋まっても一覧から消えない
+  let jump = null;
   const clearFilters = () => {
+    jump = null;
     $("result").value = "";
     $("maker").value = "";
     pickedMain = "";
@@ -1198,39 +1336,53 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     render();
   };
   const render = () => {
+    // 編集を終えた（保存・キャンセル・別のカードへ）フォームは使い回さない
+    if (liveForm && liveForm.key !== formKey()) liveForm = null;
     fillMakers();
     const words = $("q").value.trim().split(/\s+/).filter(Boolean);
     const lower = words.map((w) => w.toLowerCase());
     const result = $("result").value;
     const maker = pickedMain || $("maker").value;
     const onsiteOnly = $("onsite").checked;
+    const matches = (r) => {
+      const hay = `${r.title}\n${r.maker}\n${labelsOfItem(r).join("\n")}\n${r.review}\n${memoOf(r)}`.toLowerCase();
+      if (!lower.every((w) => hay.includes(w))) return false;
+      if (jump && !jump.ids.has(r.id)) return false;
+      if (result === "-" ? r.result !== "" : result && r.result !== result) return false;
+      if (maker && (maker === "-" ? r.maker !== "" : !labelsOfItem(r).includes(maker))) return false;
+      if (onsiteOnly && r.onsite === false) return false;
+      if ($("priv").checked && !r.isPrivate) return false;
+      if ($("withReview").checked && !r.review) return false;
+      if ($("noDate").checked && r.playDate) return false;
+      if ($("noRating").checked && r.satisfaction !== "" && r.difficulty !== "" && r.minutes !== "") return false;
+      if (memoState === "ok" && $("memoOnly").checked && !memoOf(r)) return false;
+      return true;
+    };
+    // 編集中のカードは、条件から外れても一覧に残す（件数には数えない）
+    const editing = (r) => r.id === editingId || r.id === memoEditingId;
+    let hits = 0;
     const rows = data
       .filter((r) => {
-        const hay = `${r.title}\n${r.maker}\n${labelsOfItem(r).join("\n")}\n${r.review}\n${memoOf(r)}`.toLowerCase();
-        if (!lower.every((w) => hay.includes(w))) return false;
-        if (result === "-" ? r.result !== "" : result && r.result !== result) return false;
-        if (maker && (maker === "-" ? r.maker !== "" : !labelsOfItem(r).includes(maker))) return false;
-        if (onsiteOnly && r.onsite === false) return false;
-        if ($("priv").checked && !r.isPrivate) return false;
-        if ($("withReview").checked && !r.review) return false;
-        if ($("noDate").checked && r.playDate) return false;
-        if ($("noRating").checked && r.satisfaction !== "" && r.difficulty !== "" && r.minutes !== "") return false;
-        if (memoState === "ok" && $("memoOnly").checked && !memoOf(r)) return false;
-        return true;
+        const ok = matches(r);
+        if (ok) hits++;
+        return ok || editing(r);
       })
       .sort(sorters[$("sort").value]);
     // 2語以上のときは、すべての語を含むもの（AND）に絞っていることを件数の行で言葉にする。
     // スマホで2行に折り返さないよう、その間は取得時刻を省く
     $("count").textContent =
       words.length > 1
-        ? `${words.map((w) => `「${w}」`).join("")}をすべて含む ${rows.length} / ${data.length} 件`
-        : `${rows.length} / ${data.length} 件`;
+        ? `${words.map((w) => `「${w}」`).join("")}をすべて含む ${hits} / ${data.length} 件`
+        : `${hits} / ${data.length} 件`;
     $("fetchedAt").textContent = fetchedAt ? `${fetchedAt.toLocaleTimeString("ja-JP")} に取得（${data.length}件）` : "";
     if (words.length > 1) rememberAndUsed();
     // スマホで絞り込みを畳んでいても、効いている条件の数が分かるようにする
     $("memoOnlyChip").hidden = memoState !== "ok";
-    const active = [result !== "", maker !== ""].filter(Boolean).length + activeChecks().length;
-    $("clear").hidden = active === 0;
+    const active = [result !== "", maker !== "", jump].filter(Boolean).length + activeChecks().length;
+    // 効いているのが集計からの絞り込みだけなら、その ✕ と同じことになるので「条件をクリア」は出さない
+    $("clear").hidden = active === (jump ? 1 : 0);
+    $("jump").hidden = !jump;
+    $("jump").textContent = jump?.label ?? "";
     savePrefs();
     $("toggle").textContent = active ? `絞り込み(${active})` : "絞り込み";
     $("toggle").classList.toggle("on", active > 0);
@@ -1263,6 +1415,10 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   };
   for (const id of ["q", "sort", "result", ...FILTER_CHECKS]) $(id).addEventListener("input", render);
   $("clear").addEventListener("click", clearFilters);
+  $("jump").addEventListener("click", () => {
+    jump = null;
+    render();
+  });
   {
     const prefs = loadPrefs();
     if (prefs.sort && sorters[prefs.sort]) $("sort").value = prefs.sort;
@@ -1270,10 +1426,13 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     restoreMaker = typeof prefs.maker === "string" ? prefs.maker : null;
     pickedMain = typeof prefs.pickedMain === "string" ? prefs.pickedMain : "";
     for (const id of FILTER_CHECKS) $(id).checked = prefs.checks?.[id] === true;
+    keepOnsite = prefs.checks?.onsite === true;
   }
   // メモ用のトークンを端末ごとに入れる。空にすると消す。入れたら読み直して一覧に反映する
   $("memoSet").addEventListener("click", async () => {
     setMenu(false);
+    // 設定し直すとメモの編集を閉じるので、書きかけがあれば先に確かめる
+    if (memoEditingId && !(await confirmDiscard())) return;
     const has = !!memoToken();
     const input = await dialog({
       title: "メモの設定",
@@ -1320,6 +1479,221 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     bar.classList.toggle("show");
     $("toggle").setAttribute("aria-expanded", String(bar.classList.contains("show")));
   });
+  // 集計タブ。年（参加日の年）か全期間を選び、件数と月ごとの推移・レーベルごとの成功率・満足度の高い順を出す。
+  // 一覧の絞り込みとは別で、効かせるのは「公演型のみ」だけ。ナゾ活1件を作品1つとして数える（1作品に1件しか作れないため）
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  let statsYear = null;
+  let statsOnsite = false;
+  let statsAllLabels = false;
+  const rate = (ok, ng) => (ok + ng ? `${Math.round((ok / (ok + ng)) * 100)}%` : "—");
+  const renderStats = () => {
+    const years = [...new Set(data.filter((r) => r.playDate).map((r) => r.playDate.slice(0, 4)))].sort().reverse();
+    const thisYear = String(new Date().getFullYear());
+    if (statsYear === null || (statsYear !== "all" && !years.includes(statsYear))) statsYear = years.includes(thisYear) ? thisYear : years[0] ?? "all";
+    const canOnsite = onsiteOf.size > 0;
+    if (!canOnsite) statsOnsite = false;
+    const inScope = (r) => !(statsOnsite && r.onsite === false);
+    const pool = data.filter(inScope);
+    const rows = statsYear === "all" ? pool : pool.filter((r) => r.playDate.startsWith(statsYear));
+    // 参加日のないもの。年を選んだときは集計の外、全期間では件数には入るが棒には入らない
+    const undatedRows = pool.filter((r) => !r.playDate);
+    const undated = undatedRows.length;
+    const ok = rows.filter((r) => r.result === "成功").length;
+    const ng = rows.filter((r) => r.result === "失敗").length;
+    const sats = rows.filter((r) => r.satisfaction !== "").map((r) => Number(r.satisfaction));
+    const avg = sats.length ? (sats.reduce((a, b) => a + b, 0) / sats.length).toFixed(2) : "—";
+    const scopeName = statsYear === "all" ? "全期間" : `${statsYear}年`;
+    // 前の年との比較。今年は年の途中なので、前の年も今日の月日までの分と比べる
+    let prev = null;
+    if (statsYear !== "all") {
+      const py = String(Number(statsYear) - 1);
+      const today = new Date();
+      const cut = statsYear === thisYear ? `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}` : null;
+      const pr = pool.filter((r) => r.playDate.startsWith(py) && (!cut || r.playDate.slice(5) <= cut));
+      if (pr.length) {
+        const pSats = pr.filter((r) => r.satisfaction !== "").map((r) => Number(r.satisfaction));
+        prev = {
+          year: py,
+          cut: cut && `${Number(cut.slice(0, 2))}/${Number(cut.slice(3))}`,
+          n: pr.length,
+          ok: pr.filter((r) => r.result === "成功").length,
+          ng: pr.filter((r) => r.result === "失敗").length,
+          avg: pSats.length ? pSats.reduce((a, b) => a + b, 0) / pSats.length : null,
+        };
+      }
+    }
+    // 増減は色ではなく ▲▼ で示す（件数が増えるのが良いとは限らないので、良し悪しの色は付けない）
+    const delta = (d, unit = "", digits = 0) => (d > 0 ? `▲${d.toFixed(digits)}${unit}` : d < 0 ? `▼${(-d).toFixed(digits)}${unit}` : "±0");
+    const pct = (o, n) => Math.round((o / (o + n)) * 100);
+    const cmp = prev
+      ? {
+          n: `${prev.year}年 ${prev.n}件（${delta(rows.length - prev.n)}）`,
+          rate: ok + ng && prev.ok + prev.ng ? `${prev.year}年 ${pct(prev.ok, prev.ng)}%（${delta(pct(ok, ng) - pct(prev.ok, prev.ng), "pt")}）` : "",
+          avg: sats.length && prev.avg !== null ? `${prev.year}年 ★${prev.avg.toFixed(2)}（${delta(Number((Number(avg) - Number(prev.avg.toFixed(2))).toFixed(2)), "", 2)}）` : "",
+        }
+      : { n: "", rate: "", avg: "" };
+    const cmpLine = (s) => (s ? `<div class="d">${esc(s)}</div>` : "");
+    // 棒グラフ: 年を選んだら1〜12月、全期間なら最初の年から最後の年まで（無い年も0で出す）。
+    // 棒を押すと下の行にその月（年）の件数と「一覧で見る」を出す（スマホではタップで数字を見るのと同じ操作なので、すぐには飛ばない）
+    let cols;
+    if (statsYear === "all") {
+      const ys = years.map(Number);
+      cols = [];
+      for (let y = Math.min(...ys); ys.length && y <= Math.max(...ys); y++) {
+        const items = rows.filter((r) => r.playDate.startsWith(String(y)));
+        cols.push({ items, n: items.length, axis: ys.length > 8 ? `'${String(y).slice(2)}` : String(y), name: `${y}年` });
+      }
+    } else {
+      cols = Array.from({ length: 12 }, (_, i) => {
+        const items = rows.filter((r) => Number(r.playDate.slice(5, 7)) === i + 1);
+        return { items, n: items.length, axis: String(i + 1), name: `${statsYear}年${i + 1}月`, short: `${i + 1}月` };
+      });
+    }
+    const peak = Math.max(0, ...cols.map((c) => c.n));
+    const chart = cols.length
+      ? `<div class="chart">${cols
+          .map(
+            (c, i) =>
+              `<div class="col${c.n && c.n === peak ? " peak" : ""}" role="button" tabindex="0" data-i="${i}" title="${esc(`${c.short ?? c.name} ${c.n}件`)}" aria-label="${esc(`${c.short ?? c.name} ${c.n}件`)}"><span class="n" style="bottom:calc(${peak ? (c.n / peak) * 100 : 0}% + 2px)">${c.n}</span><div class="barv" style="height:${peak ? (c.n / peak) * 100 : 0}%"></div></div>`,
+          )
+          .join("")}</div><div class="axis">${cols.map((c) => `<span>${esc(c.axis)}</span>`).join("")}</div><div id="barPick" class="pickline">棒を押すと、その${statsYear === "all" ? "年" : "月"}のナゾ活を一覧で見られます</div>`
+      : "";
+    // レーベルごと。コラボは含まれる各レーベルに数える（一覧のレーベルの絞り込みと同じ）
+    const byLabel = new Map();
+    for (const r of rows) {
+      for (const m of r.maker ? labelsOfItem(r) : ["不明"]) {
+        const g = byLabel.get(m) ?? { n: 0, ok: 0, ng: 0 };
+        g.n++;
+        if (r.result === "成功") g.ok++;
+        if (r.result === "失敗") g.ng++;
+        byLabel.set(m, g);
+      }
+    }
+    const labels = [...byLabel].sort((a, b) => (a[0] === "不明") - (b[0] === "不明") || b[1].n - a[1].n || a[0].localeCompare(b[0], "ja"));
+    const LABEL_LIMIT = 10;
+    const shownLabels = statsAllLabels ? labels : labels.slice(0, LABEL_LIMIT);
+    const labelTable = labels.length
+      ? `<table class="ltable"><thead><tr><th>レーベル</th><th class="num">件数</th><th class="num">成功率</th><th></th></tr></thead><tbody>${shownLabels
+          .map(
+            ([m, g], i) =>
+              `<tr class="go" tabindex="0" data-i="${i}" title="一覧で見る"><td>${esc(m)}</td><td class="num">${g.n}</td><td class="num">${rate(g.ok, g.ng)} <span class="sub">${g.ok}/${g.ok + g.ng}</span></td><td class="chev" aria-hidden="true">›</td></tr>`,
+          )
+          .join("")}</tbody></table>${labels.length > LABEL_LIMIT ? `<button id="moreLabels" class="more" type="button">${statsAllLabels ? "たたむ" : `すべて表示（${labels.length}）`}</button>` : ""}`
+      : `<p class="none">ありません</p>`;
+    // ベスト: 満足度の高い順。同じ満足度なら難易度の高い順、それも同じなら参加日の古い順。同じ満足度・難易度は同じ順位にする
+    const best = rows
+      .filter((r) => r.satisfaction !== "")
+      .sort((a, b) => num(b.satisfaction) - num(a.satisfaction) || num(b.difficulty) - num(a.difficulty) || a.playDate.localeCompare(b.playDate))
+      .slice(0, 10);
+    const bestList = best.length
+      ? `<ol class="best">${best
+          .map((r, i) => {
+            const rank = best.findIndex((x) => x.satisfaction === r.satisfaction && x.difficulty === r.difficulty) + 1;
+            const info = [`<span class="star">★${esc(r.satisfaction)}</span>`, r.difficulty !== "" && `難易度${esc(r.difficulty)}`, r.maker && esc(r.maker), r.playDate && esc(r.playDate)]
+              .filter(Boolean)
+              .join('<span class="sep">·</span>');
+            return `<li><span class="rk">${rank}</span><div class="bt"><a href="/mysteries/reviews/${encodeURIComponent(r.id)}" target="_blank" rel="noopener">${esc(r.title)}</a><span class="info">${info}</span></div></li>`;
+          })
+          .join("")}</ol>`
+      : `<p class="none">満足度を付けたナゾ活がありません</p>`;
+    // 未入力の案内。集計に効く満足度・成功/失敗と参加日が空のものを数え、一覧でまとめて埋められるようにする
+    const noSat = rows.filter((r) => r.satisfaction === "");
+    const noResult = rows.filter((r) => r.result === "");
+    const todoRows = [...new Set([...noSat, ...noResult, ...undatedRows])];
+    const todo = todoRows.length
+      ? `<section class="sec todo"><h2>未入力が${todoRows.length}件あります</h2><p class="todo-msg">${[
+          noSat.length && `満足度なし ${noSat.length}件`,
+          noResult.length && `成功/失敗なし ${noResult.length}件`,
+          undated && `参加日なし ${undated}件`,
+        ]
+          .filter(Boolean)
+          .join("・")}。埋めると集計が正確になります</p><button id="toFill" class="more" type="button">一覧で埋める</button></section>`
+      : "";
+    $("stats").innerHTML = `<div class="st-ctrl"><div id="statsYears" class="seg">${[...years, "all"]
+      .map((y) => `<button type="button" data-year="${y}" aria-pressed="${y === statsYear}">${y === "all" ? "全期間" : `${y}年`}</button>`)
+      .join("")}</div><label class="chip"><input id="statsOnsite" type="checkbox"${statsOnsite ? " checked" : ""}${canOnsite ? "" : " disabled"}>公演型のみ</label></div>
+${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
+<div class="tile"><div class="k">件数</div><div class="v">${rows.length}</div>${cmpLine(cmp.n)}</div>
+<div class="tile"><div class="k">成功率</div><div class="v">${rate(ok, ng)}</div><div class="s">成功${ok} / 失敗${ng}</div>${cmpLine(cmp.rate)}</div>
+<div class="tile"><div class="k">平均満足度</div><div class="v">${avg === "—" ? avg : `★${avg}`}</div><div class="s">${sats.length}件で</div>${cmpLine(cmp.avg)}</div>
+</div>${prev?.cut ? `<p class="note">${prev.year}年は、${prev.cut}までの分と比べています</p>` : ""}${chart}${
+      undated
+        ? `<p class="note">${statsYear === "all" ? `参加日のない${undated}件は、件数には入れ、グラフには入れていません` : `参加日のない${undated}件は、年ごとの集計に入れていません（全期間には入ります）`}</p>`
+        : ""
+    }</section>
+<section class="sec"><h2>レーベルごと</h2>${labelTable}<p class="note">成功率は、成功か失敗を付けたものの中での割合。コラボは含まれる各レーベルに数えます</p></section>
+<section class="sec"><h2>${scopeName}のベスト</h2>${bestList}</section>`;
+    $("statsYears").addEventListener("click", (e) => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      statsYear = b.dataset.year;
+      renderStats();
+    });
+    $("statsOnsite").addEventListener("input", (e) => {
+      statsOnsite = e.target.checked;
+      renderStats();
+    });
+    $("moreLabels")?.addEventListener("click", () => {
+      statsAllLabels = !statsAllLabels;
+      renderStats();
+    });
+    // 一覧の他の絞り込みと検索を外し、渡したものだけを出す（他の条件が効いていると見たいものが隠れるため）
+    const jumpTo = (label, items) => {
+      $("q").value = "";
+      clearFilters();
+      jump = { label, ids: new Set(items.map((r) => r.id)) };
+      render();
+      listScroll = 0;
+      showTab(false);
+    };
+    $("toFill")?.addEventListener("click", () => jumpTo(`${scopeName}の未入力`, todoRows));
+    // レーベルの行を押すと、そのレーベル（コラボを含む）のナゾ活を一覧に出す
+    const goLabel = (tr) => {
+      const m = shownLabels[Number(tr.dataset.i)][0];
+      jumpTo(`${scopeName}・${m}`, rows.filter((r) => (r.maker ? labelsOfItem(r).includes(m) : m === "不明")));
+    };
+    for (const tr of $("stats").querySelectorAll("tr.go")) {
+      tr.addEventListener("click", () => goLabel(tr));
+      tr.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), goLabel(tr)));
+    }
+    // 棒を押すと選んだ状態にし、下の行に件数と「一覧で見る」を出す
+    const pickBar = (el) => {
+      const c = cols[Number(el.dataset.i)];
+      for (const x of $("stats").querySelectorAll(".col.sel")) x.classList.remove("sel");
+      el.classList.add("sel");
+      const line = $("barPick");
+      line.textContent = `${c.short ?? c.name} ${c.n}件`;
+      if (c.n) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.id = "barGo";
+        b.className = "clear";
+        b.textContent = "一覧で見る ›";
+        b.addEventListener("click", () => jumpTo(c.name, c.items));
+        line.append(b);
+      }
+    };
+    for (const el of $("stats").querySelectorAll(".col")) {
+      el.addEventListener("click", () => pickBar(el));
+      el.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), pickBar(el)));
+    }
+  };
+  // 一覧のスクロール位置は、集計を見て戻ったときに戻す。集計は毎回先頭から
+  let onStats = false;
+  let listScroll = 0;
+  const showTab = (stats) => {
+    if (stats && !onStats) listScroll = host.scrollTop;
+    onStats = stats;
+    $("tabList").setAttribute("aria-selected", String(!stats));
+    $("tabStats").setAttribute("aria-selected", String(stats));
+    $("listView").hidden = stats;
+    $("stats").hidden = !stats;
+    if (stats) renderStats();
+    host.scrollTop = stats ? 0 : listScroll;
+  };
+  $("tabList").addEventListener("click", () => showTab(false));
+  $("tabStats").addEventListener("click", () => showTab(true));
+  $("tabs").hidden = false;
   render();
   if (memoProblem) toast(memoProblem);
 })().catch((e) => alert("エラー: " + e.message));
