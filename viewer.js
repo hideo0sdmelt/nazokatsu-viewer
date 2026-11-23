@@ -183,6 +183,12 @@
 .ltable tr.go:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .ltable .chev{width:1em;padding-left:0;text-align:right;font-size:18px;color:var(--sub)}
 .tile .d{margin-top:2px;font-size:12px;color:var(--sub)}
+.rec{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:0}
+.rec div{padding:8px 10px;border-radius:10px;background:var(--bg)}
+.rec dt{font-size:12px;color:var(--sub)}
+.rec dd{margin:2px 0 0;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.rec .sub{display:block;margin-top:2px;font-size:12px;font-weight:400;color:var(--sub);overflow-wrap:anywhere}
+.summary{margin:0;padding:10px 12px;border-radius:10px;background:var(--bg);font:inherit;font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text}
 .axis{display:flex;gap:2px;margin-top:4px}
 .axis span{flex:1;text-align:center;font-size:11px;color:var(--sub)}
 .ltable{width:100%;border-collapse:collapse;font-size:14px}
@@ -1627,9 +1633,10 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
           .join("")}</tbody></table>${labels.length > LABEL_LIMIT ? `<button id="moreLabels" class="more" type="button">${statsAllLabels ? "たたむ" : `すべて表示（${labels.length}）`}</button>` : ""}`
       : `<p class="none">ありません</p>`;
     // ベスト: 満足度の高い順。同じ満足度なら難易度の高い順、それも同じなら参加日の古い順。同じ満足度・難易度は同じ順位にする
+    const byBest = (a, b) => num(b.satisfaction) - num(a.satisfaction) || num(b.difficulty) - num(a.difficulty) || a.playDate.localeCompare(b.playDate);
     const best = rows
       .filter((r) => r.satisfaction !== "")
-      .sort((a, b) => num(b.satisfaction) - num(a.satisfaction) || num(b.difficulty) - num(a.difficulty) || a.playDate.localeCompare(b.playDate))
+      .sort(byBest)
       .slice(0, 10);
     const bestList = best.length
       ? `<ol class="best">${best
@@ -1655,6 +1662,49 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
           .filter(Boolean)
           .join("・")}。埋めると集計が正確になります</p><button id="toFill" class="more" type="button">一覧で埋める</button></section>`
       : "";
+    // 記録。日にちが要るものは参加日のあるものから数える
+    const byDay = new Map();
+    for (const r of rows) if (r.playDate) byDay.set(r.playDate, (byDay.get(r.playDate) ?? 0) + 1);
+    const ladder = [...byDay].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    const fmtDay = (d) => (statsYear === "all" ? d.replaceAll("-", "/") : `${Number(d.slice(5, 7))}/${Number(d.slice(8))}`);
+    const realLabels = labels.filter(([m]) => m !== "不明");
+    // 初めてのレーベル: そのレーベルを最初に遊んだ日がこの年にあるもの（公演型のみのときは公演型の中で比べる）
+    let newLabels = [];
+    if (statsYear !== "all") {
+      const first = new Map();
+      for (const r of pool) {
+        if (!r.playDate || !r.maker) continue;
+        for (const m of labelsOfItem(r)) if (!first.has(m) || r.playDate < first.get(m)) first.set(m, r.playDate);
+      }
+      newLabels = realLabels.map(([m]) => m).filter((m) => first.get(m)?.startsWith(statsYear));
+    }
+    const peakText = peak ? `${cols.filter((c) => c.n === peak).map((c) => c.short ?? c.name).join("・")}（${peak}件）` : "";
+    const timed = rows.filter((r) => r.minutes !== "");
+    const totalMinutes = timed.reduce((a, r) => a + Number(r.minutes), 0);
+    const recRows = [
+      ["遊んだ日数", byDay.size ? `${byDay.size}日` : "—", ""],
+      ["遊んだレーベル", realLabels.length ? `${realLabels.length}${statsYear === "all" ? "" : `（初めて ${newLabels.length}）`}` : "—", newLabels.join("・")],
+      ["はしごした日", ladder.length ? `${ladder.length}日` : "なし", ladder.length ? `最多 1日${ladder[0][1]}本（${fmtDay(ladder[0][0])}）` : ""],
+      [`一番多く遊んだ${statsYear === "all" ? "年" : "月"}`, peakText || "—", ""],
+      ["合計プレイ時間", timed.length ? minuteLabel(totalMinutes) : "—", timed.length ? `時間を付けた${timed.length}件で` : ""],
+    ];
+    const record = `<dl class="rec">${recRows
+      .map(([k, v, s]) => `<div><dt>${k}</dt><dd>${esc(v)}${s ? `<span class="sub">${esc(s)}</span>` : ""}</dd></div>`)
+      .join("")}</dl>`;
+    // まとめの文章。X などに貼る用。ベストは外に出すので、公開しているナゾ活だけから選ぶ（件数や成功率には非公開も入れる）
+    const sign = (d) => (d > 0 ? `+${d}` : d < 0 ? `-${-d}` : "±0");
+    const pubBest = rows.filter((r) => !r.isPrivate && r.satisfaction !== "").sort(byBest).slice(0, 3);
+    const summary = [
+      `${statsYear === "all" ? "これまでのナゾ活" : `${statsYear}年のナゾ活`}${statsOnsite ? "（公演型）" : ""}`,
+      `${rows.length}件${prev ? `（${prev.cut ? `${prev.year}年の同じ時期` : `${prev.year}年`}より ${sign(rows.length - prev.n)}件）` : ""}`,
+      [ok + ng && `成功率 ${rate(ok, ng)}（成功${ok}・失敗${ng}）`, sats.length && `平均満足度 ★${avg}`].filter(Boolean).join("／"),
+      [realLabels.length && `遊んだレーベル ${realLabels.length}${newLabels.length ? `（初めて ${newLabels.length}）` : ""}`, ladder.length && `はしごした日 ${ladder.length}日`].filter(Boolean).join("／"),
+      peakText && `一番多く遊んだ${statsYear === "all" ? "年" : "月"}：${peakText}`,
+      realLabels.length && `よく行ったレーベル：${realLabels.slice(0, 3).map(([m, g]) => `${m} ${g.n}`).join("・")}`,
+      pubBest.length && `ベスト${pubBest.length}：\n${pubBest.map((r, i) => `${i + 1}. ${r.title}（★${r.satisfaction}）`).join("\n")}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
     $("stats").innerHTML = `<div class="st-ctrl"><div id="statsYears" class="seg">${[...years, "all"]
       .map((y) => `<button type="button" data-year="${y}" aria-pressed="${y === statsYear}">${y === "all" ? "全期間" : `${y}年`}</button>`)
       .join("")}</div><label class="chip"><input id="statsOnsite" type="checkbox"${statsOnsite ? " checked" : ""}${canOnsite ? "" : " disabled"}>公演型のみ</label></div>
@@ -1667,8 +1717,23 @@ ${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
         ? `<p class="note">${statsYear === "all" ? `参加日のない${undated}件は、件数には入れ、グラフには入れていません` : `参加日のない${undated}件は、年ごとの集計に入れていません（全期間には入ります）`}</p>`
         : ""
     }</section>
+<section class="sec"><h2>${scopeName}の記録</h2>${record}</section>
 <section class="sec"><h2>レーベルごと</h2>${labelTable}<p class="note">成功率は、成功か失敗を付けたものの中での割合。コラボは含まれる各レーベルに数えます</p></section>
-<section class="sec"><h2>${scopeName}のベスト</h2>${bestList}</section>`;
+<section class="sec"><h2>${scopeName}のベスト</h2>${bestList}</section>
+<section class="sec"><h2>まとめをコピー</h2><pre id="summary" class="summary">${esc(summary)}</pre><button id="copySummary" class="more" type="button">コピーする</button><p class="note">ベスト3は、公開しているナゾ活から選びます。件数や成功率には非公開も入ります</p></section>`;
+    // コピーできないとき（古いブラウザや権限なし）は、文章を選んだ状態にして手でコピーしてもらう
+    $("copySummary").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(summary);
+        toast("まとめをコピーしました");
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents($("summary"));
+        getSelection().removeAllRanges();
+        getSelection().addRange(range);
+        toast("コピーできませんでした。選んだ文章をコピーしてください");
+      }
+    });
     $("statsYears").addEventListener("click", (e) => {
       const b = e.target.closest("button");
       if (!b) return;
