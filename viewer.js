@@ -56,9 +56,16 @@
 .filters select{height:38px;font-size:14px;padding:0 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text)}
 .countrow .left{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-width:0}
 #count{white-space:nowrap}
-.sortbox{flex:none;display:flex;align-items:center;gap:2px;font-size:12px;color:var(--sub)}
-.sortbox select{height:30px;padding:0 4px;font-size:13px;font-weight:600;border:0;border-radius:6px;background:transparent;color:var(--text)}
-@media (hover:hover){.sortbox select:hover{background:var(--chip)}}
+/* 並び順は「何で」と「向き」を1つの枠にまとめる。何では ⇅ と ▾ 付きのセレクト、向きは押すたびに逆になるボタン */
+.sortbox{flex:none;display:flex;align-items:stretch;height:32px;border:1px solid var(--line);border-radius:16px;background:var(--card);overflow:hidden}
+.sortkey{position:relative;display:flex;align-items:center}
+.sortkey::before{content:"⇅";position:absolute;left:10px;font-size:13px;color:var(--sub);pointer-events:none}
+.sortkey::after{content:"";position:absolute;right:9px;width:0;height:0;border:4px solid transparent;border-top:5px solid var(--sub);border-bottom:0;pointer-events:none}
+.sortkey select{-webkit-appearance:none;appearance:none;height:100%;padding:0 24px 0 27px;font-size:13px;font-weight:700;border:0;background:transparent;color:var(--text)}
+.sortdir{flex:none;height:100%;padding:0 12px 0 10px;font-size:13px;border:0;border-left:1px solid var(--line);background:transparent;color:var(--accent);white-space:nowrap}
+@media (hover:hover){.sortkey select:hover,.sortdir:hover{background:var(--chip);filter:none}}
+.sortkey select:focus-visible,.sortdir:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg[hidden]{display:none}
 .seg button{height:38px;padding:0 12px;font-size:14px;border:1px solid var(--line);border-radius:19px;background:var(--card);color:var(--text)}
@@ -82,12 +89,25 @@
 .chip:has(input:disabled){opacity:.45;cursor:not-allowed}
 .chip input:disabled{cursor:not-allowed}
 .chip[hidden]{display:none}
-.countrow{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:28px;margin:6px 2px 10px}
+.countrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 8px;min-height:28px;margin:6px 2px 10px}
+.countrow .sortbox{margin-left:auto}
 #count{font-size:13px;color:var(--sub)}
 .clear{flex:none;height:28px;padding:0 12px;font-size:13px;font-weight:600;border:0;border-radius:14px;background:var(--chip);color:var(--accent)}
 .clear[hidden]{display:none}
 .jump{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--accent);color:var(--on)}
 .jump::after{content:" ✕";font-weight:400}
+/* 前回の一覧を出している間の帯。取れなかったときは注意の色にして、再読み込みを出す */
+.stalebar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:4px 2px 8px;padding:7px 12px;border-radius:10px;background:var(--chip);color:var(--sub);font-size:12px;line-height:1.5}
+.stalebar[hidden]{display:none}
+.stalebar .spin{flex:none;width:14px;height:14px;margin:0;border-width:2px}
+.stalebar.err{background:#fff1dc;color:#8a5300}
+@media (prefers-color-scheme:dark){.stalebar.err{background:#3a2c14;color:#ffcf85}}
+.card.fresh{box-shadow:0 0 0 2px var(--accent)}
+/* 新着の印。空席・ESCAPE.ID の一覧と同じく、カードの上の縁から垂れ下がるタグにする（状態の札と見分けやすく、情報の行もずらさない） */
+.card.new{padding-top:18px}
+.newBadge{position:absolute;top:0;left:14px;padding:0 7px 1px;border-radius:0 0 6px 6px;background:var(--accent);color:var(--on);font-size:11px;font-weight:700;line-height:1.5;white-space:nowrap}
+@media (max-width:640px){.card.new{padding-top:15px}.newBadge{left:10px;font-size:10px}}
+.card{transition:box-shadow .8s}
 .empty{padding:40px 16px;text-align:center;color:var(--sub);font-size:15px}
 .empty p{margin:0 0 14px}
 .empty .clear{height:36px;padding:0 16px;font-size:14px;border-radius:18px;margin:0 4px}
@@ -498,6 +518,8 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     const min = Math.floor((Date.now() - fetchedAt) / 60e3);
     return min < 1 ? "たった今" : min < 60 ? `${min}分前` : min < 1440 ? `${Math.floor(min / 60)}時間前` : `${Math.floor(min / 1440)}日前`;
   };
+  // 「3時間前に」「たった今」（帯やお知らせの文の中で使う）
+  const agoAt = () => (agoText() === "たった今" ? "たった今" : `${agoText()}に`);
   const fetchedLabel = () => {
     const today = fetchedAt.toDateString() === new Date().toDateString();
     const hm = fetchedAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
@@ -644,19 +666,67 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     throw new Error("他の端末の保存と重なりました。もう一度保存してください");
   };
 
+  // 前回の一覧。この端末のブラウザの nazohiroba.com 用の保存場所（IndexedDB の nazokatsuViewer）に、ログイン中の人ごとに置く。
+  // 開いたらまずこれを出し、最新は裏で取って入れ替える（待たずに眺め始められるように）。端末の外には出さない。メモは置かない
+  const cacheDb = (mode, fn) =>
+    new Promise((resolve, reject) => {
+      const open = indexedDB.open("nazokatsuViewer", 1);
+      open.onupgradeneeded = () => open.result.createObjectStore("cache");
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const db = open.result;
+        const tx = db.transaction("cache", mode);
+        const req = fn(tx.objectStore("cache"));
+        tx.oncomplete = () => {
+          db.close();
+          resolve(req.result);
+        };
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+      };
+    });
+  let cacheUid = null;
+  const saveCache = async () => {
+    if (!cacheUid) return;
+    try {
+      await cacheDb("readwrite", (s) => s.put({ v: 1, savedAt: (fetchedAt ?? new Date()).getTime(), reviews: data, makers: [...makers], onsite: [...onsiteOf] }, cacheUid));
+    } catch (e) {
+      console.warn(e);
+    }
+  };
   let data;
+  // 前回の一覧を出していて、まだ最新を取れていない間は true（古い値を書き戻さないよう、編集とメモを押せなくする）
+  let stale = false;
+  let cached = null;
   try {
-    data = await fetchAll(await getAuth());
-  } catch (e) {
-    return fail(e.message);
-  }
-  try {
-    await loadMakers(data);
+    cacheUid = (await idb((s) => s.getAll())).map((r) => r.value).find((v) => v?.stsTokenManager?.accessToken)?.uid ?? null;
+    if (cacheUid) cached = await cacheDb("readonly", (s) => s.get(cacheUid));
   } catch (e) {
     console.warn(e);
   }
-  await loadMemos();
-  if (!host.isConnected) return;
+  if (cached?.v === 1 && Array.isArray(cached.reviews)) {
+    data = cached.reviews;
+    for (const [k, v] of cached.makers ?? []) makers.set(k, v);
+    for (const [k, v] of cached.onsite ?? []) onsiteOf.set(k, v);
+    fetchedAt = new Date(cached.savedAt);
+    stale = true;
+  } else {
+    try {
+      data = await fetchAll(await getAuth());
+    } catch (e) {
+      return fail(e.message);
+    }
+    try {
+      await loadMakers(data);
+    } catch (e) {
+      console.warn(e);
+    }
+    await loadMemos();
+    if (!host.isConnected) return;
+    saveCache();
+  }
 
   $("main").innerHTML = `<div id="listView" class="wrap">
 <div class="bar">
@@ -677,6 +747,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
         <option value="失敗">失敗</option>
         <option value="-">成功/失敗: 未設定</option>
       </select>
+      <label class="chip"><input id="sat4" type="checkbox">★4以上</label>
       <label class="chip"><input id="onsite" type="checkbox">公演型のみ</label>
       <label class="chip"><input id="priv" type="checkbox">非公開のみ</label>
       <label class="chip"><input id="withReview" type="checkbox">感想ありのみ</label>
@@ -686,16 +757,33 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     </div>
   </div>
 </div>
+<div id="staleBar" class="stalebar" role="status" hidden></div>
 <div class="countrow"><div class="left"><div id="count"></div><button id="jump" class="clear jump" type="button" title="この絞り込みを外す" hidden></button><button id="clear" class="clear" type="button" hidden>条件をクリア</button></div>
-  <label class="sortbox">並び順<select id="sort">
-    <option value="date-desc">参加日 新しい順</option>
-    <option value="date-asc">参加日 古い順</option>
-    <option value="posted-desc">投稿日 新しい順</option>
-    <option value="posted-asc">投稿日 古い順</option>
-    <option value="sat-desc">満足度 高い順</option>
-    <option value="sat-asc">満足度 低い順</option>
-    <option value="title">作品名順</option>
-  </select></label>
+  <div class="sortbox" role="group" aria-label="並び順">
+    <label class="sortkey"><span class="sr">並び順</span><select id="sortKey">
+      <option value="date">参加日</option>
+      <option value="posted">投稿日</option>
+      <option value="sat">満足度</option>
+      <option value="diff">難易度</option>
+      <option value="time">プレイ時間</option>
+      <option value="title">作品名</option>
+    </select></label>
+    <button id="sortDir" class="sortdir" type="button"></button>
+    <select id="sort" hidden tabindex="-1" aria-hidden="true">
+      <option value="date-desc">参加日 新しい順</option>
+      <option value="date-asc">参加日 古い順</option>
+      <option value="posted-desc">投稿日 新しい順</option>
+      <option value="posted-asc">投稿日 古い順</option>
+      <option value="sat-desc">満足度 高い順</option>
+      <option value="sat-asc">満足度 低い順</option>
+      <option value="diff-desc">難易度 難しい順</option>
+      <option value="diff-asc">難易度 易しい順</option>
+      <option value="time-desc">プレイ時間 長い順</option>
+      <option value="time-asc">プレイ時間 短い順</option>
+      <option value="title">作品名 あ→ん</option>
+      <option value="title-desc">作品名 ん→あ</option>
+    </select>
+  </div>
 </div>
 <div id="list"></div>
 </div>
@@ -709,8 +797,40 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     "posted-asc": (a, b) => b.seq - a.seq,
     "sat-desc": (a, b) => (a.satisfaction === "") - (b.satisfaction === "") || num(b.satisfaction) - num(a.satisfaction),
     "sat-asc": (a, b) => (a.satisfaction === "") - (b.satisfaction === "") || num(a.satisfaction) - num(b.satisfaction),
+    "diff-desc": (a, b) => (a.difficulty === "") - (b.difficulty === "") || num(b.difficulty) - num(a.difficulty),
+    "diff-asc": (a, b) => (a.difficulty === "") - (b.difficulty === "") || num(a.difficulty) - num(b.difficulty),
+    "time-desc": (a, b) => (a.minutes === "") - (b.minutes === "") || num(b.minutes) - num(a.minutes),
+    "time-asc": (a, b) => (a.minutes === "") - (b.minutes === "") || num(a.minutes) - num(b.minutes),
     title: (a, b) => a.title.localeCompare(b.title, "ja"),
+    "title-desc": (a, b) => b.title.localeCompare(a.title, "ja"),
   };
+  // 並び順は「何で」と「向き」に分けて選ぶ。値は #sort（key-dir の形。作品名の昇順だけは前からの "title"）に持つ
+  const SORT_DIRS = {
+    date: ["新しい順", "古い順"],
+    posted: ["新しい順", "古い順"],
+    sat: ["高い順", "低い順"],
+    diff: ["難しい順", "易しい順"],
+    time: ["長い順", "短い順"],
+    title: ["ん→あ", "あ→ん"],
+  };
+  const sortValue = (key, desc) => (key === "title" ? (desc ? "title-desc" : "title") : `${key}-${desc ? "desc" : "asc"}`);
+  const parseSort = (v) => (v === "title" ? ["title", false] : [v.replace(/-(desc|asc)$/, ""), v.endsWith("-desc")]);
+  const syncSortUI = () => {
+    const [key, desc] = parseSort($("sort").value);
+    $("sortKey").value = key;
+    $("sortDir").textContent = `${desc ? "↓" : "↑"} ${SORT_DIRS[key][desc ? 0 : 1]}`;
+    $("sortDir").setAttribute("aria-label", `向き: ${SORT_DIRS[key][desc ? 0 : 1]}（押すと逆にする）`);
+  };
+  const setSort = (v) => {
+    $("sort").value = v;
+    $("sort").dispatchEvent(new Event("input", { bubbles: true }));
+  };
+  // 何で並べるかを変えたら、向きはその項目のふつうの向き（作品名だけ あ→ん、他は新しい・高い・難しい・長い順）にする
+  $("sortKey").addEventListener("input", () => setSort(sortValue($("sortKey").value, $("sortKey").value !== "title")));
+  $("sortDir").addEventListener("click", () => {
+    const [key, desc] = parseSort($("sort").value);
+    setSort(sortValue(key, !desc));
+  });
   const highlight = (parent, text, words) => {
     if (!words.length) return parent.append(text);
     const re = new RegExp(`(${words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
@@ -752,6 +872,9 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     requestAnimationFrame(fit);
   };
   let editingId = null;
+  // 最新に入れ替えたときに増えていたナゾ活（次に描き直すまで「新着」のタグ）と、増えたか変わったナゾ活（数秒だけ枠）
+  let newIds = new Set();
+  let freshIds = new Set();
   // 続けて出したときに、前のタイマーで次のお知らせが早く消えないよう、出すたびに数え直す
   let toastTimer;
   const toast = (msg) => {
@@ -794,6 +917,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     if (!res.ok || body.success !== true) throw new Error(`更新に失敗しました: ${res.status} ${JSON.stringify(body).slice(0, 200)}`);
     setBusy(true, "反映を確認中…");
     data = await fetchAll(auth);
+    saveCache();
     const after = data.find((x) => x.id === r.id);
     const bad = changes.filter(([k]) => String(after?.[k]) !== String(next[k]));
     // 通信が速いと表示が一瞬で消えるため、最低0.8秒は保存中を見せる
@@ -836,6 +960,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     }
     setBusy(true, "反映を確認中…");
     data = await fetchAll(auth);
+    saveCache();
     await new Promise((resolve) => setTimeout(resolve, Math.max(0, 800 - (Date.now() - startedAt))));
     editingId = null;
     render();
@@ -1061,7 +1186,8 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   const formKey = () => (editingId ? `edit:${editingId}` : memoEditingId ? `memo:${memoEditingId}` : null);
   // 別のカードの編集に移る。今のフォームに保存していない変更があれば確かめる
   const startEditing = async (kind, id) => {
-    if (formKey() === `${kind}:${id}`) return;
+    // 前回の一覧を出している間は、ナゾ活の編集だけ止める（メモは保存の直前に読み直すので書いてよい）
+    if ((stale && kind === "edit") || formKey() === `${kind}:${id}`) return;
     if (!(await confirmDiscard())) return;
     editingId = kind === "edit" ? id : null;
     memoEditingId = kind === "memo" ? id : null;
@@ -1075,7 +1201,15 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       return liveForm.el;
     }
     const el = document.createElement("article");
-    el.className = "card";
+    el.className = `card${newIds.has(r.id) ? " new" : ""}${freshIds.has(r.id) ? " fresh" : ""}`;
+    if (newIds.has(r.id)) {
+      const badge = document.createElement("span");
+      badge.className = "newBadge";
+      badge.textContent = "新着";
+      el.append(badge);
+    }
+    // 最新に入れ替えたときに、見ていたカードを探して位置を合わせるため
+    el.dataset.id = r.id;
     const head = document.createElement("div");
     head.className = "head";
     const h = document.createElement("h2");
@@ -1089,6 +1223,9 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     editBtn.type = "button";
     editBtn.className = "edit-btn";
     editBtn.textContent = "編集";
+    // 前回の一覧を出している間は、古い値を書き戻さないよう押せなくする（最新が届くと押せる）
+    const staleTitle = "最新を取得してから編集できます";
+    if (stale) Object.assign(editBtn, { disabled: true, title: staleTitle });
     editBtn.addEventListener("click", () => startEditing("edit", r.id));
     const btns = document.createElement("div");
     btns.className = "btns";
@@ -1177,8 +1314,8 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   // 文字数や改行の有無ではなく、折りたたんだ状態で実際に切れているカードだけに「タップで全文を表示」を付ける。
   // openAll（検索中）はヒット箇所が隠れないよう、切れるカードを最初から開く
   // 書き換えと測定を交互にするとカードごとにレイアウトをやり直すので、たたむ → まとめて測る → まとめて付ける、の順にする
-  const markLong = (openAll) => {
-    const cards = [...$("list").querySelectorAll(".card")]
+  const markLong = (openAll, els = $("list").querySelectorAll(".card")) => {
+    const cards = [...els]
       .map((el) => ({ el, ps: [...el.querySelectorAll(".review, .memo-text")], wasOpen: el.classList.contains("open") }))
       .filter((c) => c.ps.length);
     for (const c of cards) c.el.classList.remove("open");
@@ -1340,28 +1477,70 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   let keepOnsite = false;
   const savePrefs = () => {
     try {
-      const on = (id) => $(id).checked || (id === "onsite" && $(id).disabled && keepOnsite);
+      // 集計から飛んでいる間は、飛ぶ前の絞り込みを覚えたままにする（飛ぶときに外した状態を残さない）
+      const s = beforeJump;
+      const on = (id) => (s ? s.checks[id] : $(id).checked || (id === "onsite" && $(id).disabled && keepOnsite));
       const checks = Object.fromEntries(FILTER_CHECKS.filter(on).map((id) => [id, true]));
-      localStorage.setItem(PREFS_KEY, JSON.stringify({ sort: $("sort").value, result: $("result").value, maker: $("maker").value, pickedMain, checks }));
+      const filters = s ? { result: s.result, maker: s.maker, pickedMain: s.pickedMain } : { result: $("result").value, maker: $("maker").value, pickedMain };
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ ...filters, checks }));
     } catch {}
   };
   // 「条件をクリア」で戻すもの。並び替えと検索欄はそのまま
-  const FILTER_CHECKS = ["onsite", "priv", "withReview", "noDate", "noRating", "memoOnly"];
+  const FILTER_CHECKS = ["sat4", "onsite", "priv", "withReview", "noDate", "noRating", "memoOnly"];
   const activeChecks = () => FILTER_CHECKS.filter((id) => $(id).checked && (id !== "memoOnly" || memoState === "ok"));
   // 集計から飛んできたときの一時的な絞り込み（{ label, ids }）。覚えておかず、外すか「条件をクリア」で消える。
   // ID で持つので、飛んだ先で編集して未入力が埋まっても一覧から消えない
   let jump = null;
-  const clearFilters = () => {
-    jump = null;
+  // 飛ぶ前の検索と絞り込み。飛んだ先の ✕ で元に戻す（「条件をクリア」を押したら捨てる）
+  let beforeJump = null;
+  const resetFilters = () => {
     $("result").value = "";
     $("maker").value = "";
     pickedMain = "";
     for (const id of FILTER_CHECKS) $(id).checked = false;
+  };
+  const clearFilters = () => {
+    jump = null;
+    beforeJump = null;
+    resetFilters();
     render();
   };
+  const snapshotFilters = () => ({
+    q: $("q").value,
+    result: $("result").value,
+    maker: $("maker").value,
+    pickedMain,
+    checks: Object.fromEntries(FILTER_CHECKS.map((id) => [id, $(id).checked])),
+  });
+  const restoreFilters = (s) => {
+    $("q").value = s.q;
+    $("result").value = s.result;
+    $("maker").value = s.maker;
+    pickedMain = s.pickedMain;
+    for (const id of FILTER_CHECKS) $(id).checked = s.checks[id] && !$(id).disabled;
+  };
+  // 集計から一覧へ飛ぶ。続けて飛んだときも、最初に飛ぶ前の状態を戻し先にする
+  const startJump = (label, items) => {
+    beforeJump ??= snapshotFilters();
+    $("q").value = "";
+    resetFilters();
+    jump = { label, ids: new Set(items.map((r) => r.id)) };
+    render();
+  };
+  const endJump = () => {
+    jump = null;
+    if (beforeJump) restoreFilters(beforeJump);
+    beforeJump = null;
+    render();
+  };
+  // 最後に描いたときの検索語と、描き直しの番号（古い描き直しの続きを止める）
+  let lastQuery = null;
+  let renderToken = 0;
+  const FIRST_CARDS = 30;
   const render = () => {
     // 編集を終えた（保存・キャンセル・別のカードへ）フォームは使い回さない
     if (liveForm && liveForm.key !== formKey()) liveForm = null;
+    syncSortUI();
     fillMakers();
     const words = $("q").value.trim().split(/\s+/).filter(Boolean);
     const lower = words.map((w) => w.toLowerCase());
@@ -1374,6 +1553,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       if (jump && !jump.ids.has(r.id)) return false;
       if (result === "-" ? r.result !== "" : result && r.result !== result) return false;
       if (maker && (maker === "-" ? r.maker !== "" : !labelsOfItem(r).includes(maker))) return false;
+      if ($("sat4").checked && !(r.satisfaction !== "" && Number(r.satisfaction) >= 4)) return false;
       if (onsiteOnly && r.onsite === false) return false;
       if ($("priv").checked && !r.isPrivate) return false;
       if ($("withReview").checked && !r.review) return false;
@@ -1410,8 +1590,34 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     savePrefs();
     $("toggle").textContent = active ? `絞り込み(${active})` : "絞り込み";
     $("toggle").classList.toggle("on", active > 0);
-    if (rows.length) $("list").replaceChildren(...rows.map((r) => card(r, words)));
-    else {
+    lastQuery = $("q").value;
+    const token = ++renderToken;
+    if (rows.length) {
+      // 全部を一度に作ると、スマホで1文字ごとに0.2秒ほど止まる。最初の30枚（と今見ている所まで）をすぐ描き、残りは手が空いたときに足す
+      const list = $("list");
+      const keep = host.scrollTop;
+      let i = 0;
+      const batch = (n) => {
+        const els = rows.slice(i, i + n).map((r) => card(r, words));
+        i += els.length;
+        list.append(...els);
+        markLong(words.length > 0, els);
+      };
+      list.replaceChildren();
+      batch(FIRST_CARDS);
+      // 一覧の途中を見ているとき（編集の保存後など）は、見ている所の少し先まで描いて位置を保つ
+      const bottom = () => list.getBoundingClientRect().bottom - host.getBoundingClientRect().top + host.scrollTop;
+      while (i < rows.length && keep > 0 && bottom() < keep + host.clientHeight * 2) batch(FIRST_CARDS);
+      if (host.scrollTop !== keep) host.scrollTop = keep;
+      const idle = (f) => (window.requestIdleCallback ? requestIdleCallback(f, { timeout: 200 }) : setTimeout(f, 16));
+      const more = () => {
+        if (token !== renderToken || !host.isConnected || i >= rows.length) return;
+        batch(60);
+        idle(more);
+      };
+      idle(more);
+      return;
+    } else {
       // 0件のときは、何も出ないのではなく理由と戻し方を出す
       const box = document.createElement("div");
       box.className = "empty";
@@ -1435,17 +1641,21 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       }
       $("list").replaceChildren(box);
     }
-    markLong(words.length > 0);
   };
-  for (const id of ["q", "sort", "result", ...FILTER_CHECKS]) $(id).addEventListener("input", render);
-  $("clear").addEventListener("click", clearFilters);
-  $("jump").addEventListener("click", () => {
-    jump = null;
+  for (const id of ["sort", "result", ...FILTER_CHECKS]) $(id).addEventListener("input", render);
+  // 検索欄は、日本語入力の変換中（「な」「なぞ」…）は描き直さず、確定したときに描き直す。
+  // 確定で input と compositionend の両方が来ることがあるので、検索語が変わっていなければ描き直さない
+  const onSearch = (e) => {
+    if (e.isComposing || $("q").value === lastQuery) return;
     render();
-  });
+  };
+  $("q").addEventListener("input", onSearch);
+  $("q").addEventListener("compositionend", onSearch);
+  $("clear").addEventListener("click", clearFilters);
+  $("jump").addEventListener("click", endJump);
   {
     const prefs = loadPrefs();
-    if (prefs.sort && sorters[prefs.sort]) $("sort").value = prefs.sort;
+    // 並び順は覚えず、毎回「参加日の新しい順」で開く（一時的に変えて眺めるものなので）
     if ([...$("result").options].some((o) => o.value === prefs.result)) $("result").value = prefs.result;
     restoreMaker = typeof prefs.maker === "string" ? prefs.maker : null;
     pickedMain = typeof prefs.pickedMain === "string" ? prefs.pickedMain : "";
@@ -1526,7 +1736,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   // 裏に残したアプリに戻ったとき、取得から1時間以上たっていれば知らせる
   const onVisible = () => {
     if (document.visibilityState === "visible" && host.isConnected && fetchedAt && Date.now() - fetchedAt > 3600e3) {
-      toast(`${agoText()}に取得した一覧です。最新にするには ⋯ →「最新を取得」`);
+      toast(`${agoAt()}取得した一覧です。最新にするには ⋯ →「最新を取得」`);
     }
   };
   document.addEventListener("visibilitychange", onVisible);
@@ -1748,12 +1958,10 @@ ${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
       statsAllLabels = !statsAllLabels;
       renderStats();
     });
-    // 一覧の他の絞り込みと検索を外し、渡したものだけを出す（他の条件が効いていると見たいものが隠れるため）
+    // 一覧の他の絞り込みと検索を外し、渡したものだけを出す（他の条件が効いていると見たいものが隠れるため）。
+    // 外した条件は ✕ で戻り、次に開いたときの記憶も飛ぶ前のまま
     const jumpTo = (label, items) => {
-      $("q").value = "";
-      clearFilters();
-      jump = { label, ids: new Set(items.map((r) => r.id)) };
-      render();
+      startJump(label, items);
       listScroll = 0;
       showTab(false);
     };
@@ -1808,6 +2016,93 @@ ${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
   // ⋯ →「最新を取得」：ページを再読み込みせずに、ナゾ活・レーベル・メモを取り直す。
   // 絞り込み・検索・並び順・スクロール位置はそのまま。編集中の書きかけがあれば先に確かめる（取り直すと編集を閉じる）
   let refetching = false;
+  let memoReady = Promise.resolve();
+  // 最新に入れ替える。増えた・消えた・変わった件数を返し、増えたカードには数秒「新着」を付ける。
+  // 一覧の途中を見ているときは、一番上に見えていたカードが同じ高さに来るようにスクロールを合わせる（上に1件入っても跳ばない）
+  const sig = (r) => JSON.stringify([r.title, ...FIELDS.map(([k]) => r[k])]);
+  const firstVisible = () => {
+    const top = root.querySelector(".bar").getBoundingClientRect().bottom;
+    for (const el of $("list").querySelectorAll(".card[data-id]")) {
+      const rect = el.getBoundingClientRect();
+      if (rect.bottom > top) return { id: el.dataset.id, top: rect.top };
+    }
+    return null;
+  };
+  let freshTimer;
+  // 描き直しても、一覧の途中で一番上に見えていたカードを同じ高さに保つ（上に1件入ったり、メモが後から出たりしても跳ばない）
+  const keepView = (fn) => {
+    const anchor = !onStats && host.scrollTop > 0 ? firstVisible() : null;
+    fn();
+    const el = anchor && [...$("list").querySelectorAll(".card[data-id]")].find((e) => e.dataset.id === anchor.id);
+    if (el) host.scrollTop += el.getBoundingClientRect().top - anchor.top;
+  };
+  const applyFresh = (fresh) => {
+    const old = new Map(data.map((r) => [r.id, r]));
+    const nowIds = new Set(fresh.map((r) => r.id));
+    const added = fresh.filter((r) => !old.has(r.id)).map((r) => r.id);
+    const removed = data.filter((r) => !nowIds.has(r.id)).length;
+    const changed = fresh.filter((r) => old.has(r.id) && sig(old.get(r.id)) !== sig(r));
+    data = fresh;
+    newIds = new Set(added);
+    freshIds = new Set([...added, ...changed.map((r) => r.id)]);
+    keepView(() => {
+      render();
+      if (onStats) renderStats();
+    });
+    // 枠は数秒で消す。新着のタグは次に描き直すまで残す（消すとカードの高さが変わって一覧が動くため）
+    clearTimeout(freshTimer);
+    freshTimer = setTimeout(() => {
+      newIds = new Set();
+      freshIds = new Set();
+      for (const c of $("list").querySelectorAll(".card.fresh")) c.classList.remove("fresh");
+    }, 5000);
+    // 変わったものが1〜2件なら、どれの何が変わったかを書く（札は付けない）
+    const what = (r) => {
+      const before = old.get(r.id);
+      const labels = FIELDS.filter(([k]) => String(before[k]) !== String(r[k])).map(([, l]) => l);
+      return `「${r.title}」の${labels.join("・") || "作品名"}`;
+    };
+    const changedText = changed.length && (changed.length <= 2 ? `${changed.map(what).join("と")}が変わりました` : `${changed.length}件が更新されました`);
+    return [added.length && `${added.length}件増えました`, removed && `${removed}件消えました`, changedText].filter(Boolean).join("・");
+  };
+  // 前回の一覧を出したあと、裏で最新を取る。取れなければ前回の一覧のまま、帯に理由と再読み込みを出す
+  const pullLatest = async () => {
+    const bar = $("staleBar");
+    const spin = document.createElement("div");
+    spin.className = "spin";
+    bar.className = "stalebar";
+    bar.replaceChildren(spin, `${agoAt()}取得した一覧です。最新を取得中…`);
+    bar.hidden = false;
+    refetching = true;
+    $("refetch").disabled = true;
+    try {
+      const fresh = await fetchAll(await getAuth());
+      try {
+        await loadMakers(fresh);
+      } catch (e) {
+        console.warn(e);
+      }
+      await memoReady;
+      if (!host.isConnected) return;
+      stale = false;
+      bar.hidden = true;
+      const diff = applyFresh(fresh);
+      saveCache();
+      if (diff) toast(`最新にしました：${diff}`);
+    } catch (e) {
+      if (!host.isConnected) return;
+      const reload = document.createElement("button");
+      reload.type = "button";
+      reload.className = "clear";
+      reload.textContent = "ページを再読み込み";
+      reload.addEventListener("click", () => location.reload());
+      bar.className = "stalebar err";
+      bar.replaceChildren(`${agoAt()}取得した一覧です。最新を取得できませんでした（${e.message}）。編集は最新を取得してからできます`, reload);
+    } finally {
+      refetching = false;
+      $("refetch").disabled = false;
+    }
+  };
   $("refetch").addEventListener("click", async () => {
     setMenu(false);
     if (refetching || !(await confirmDiscard())) return;
@@ -1823,16 +2118,13 @@ ${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
       }
       await loadMemos();
       if (!host.isConnected) return;
-      const before = data.length;
-      data = fresh;
       editingId = null;
       memoEditingId = null;
-      const top = host.scrollTop;
-      render();
-      if (onStats) renderStats();
-      host.scrollTop = top;
-      const diff = data.length - before;
-      toast(`最新にしました（${data.length}件${diff ? `・${diff > 0 ? "+" : ""}${diff}件` : ""}）`);
+      stale = false;
+      $("staleBar").hidden = true;
+      const diff = applyFresh(fresh);
+      saveCache();
+      toast(diff ? `最新にしました：${diff}` : `最新にしました（${data.length}件・変わりなし）`);
       if (memoProblem) notify(memoProblem, "メモを読み込めません");
     } catch (e) {
       // 取れなかったときは、今の一覧をそのまま残す
@@ -1844,5 +2136,14 @@ ${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
     }
   });
   render();
-  if (memoProblem) toast(memoProblem);
+  if (stale) {
+    // メモはナゾヒロバとは別（GitHub）で、保存の直前に必ず読み直すので、前回の一覧を出している間も最初から読んで書けるようにする
+    memoReady = (async () => {
+      await loadMemos();
+      if (!host.isConnected) return;
+      keepView(render);
+      if (memoProblem) toast(memoProblem);
+    })();
+    pullLatest();
+  } else if (memoProblem) toast(memoProblem);
 })().catch((e) => alert("エラー: " + e.message));
