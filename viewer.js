@@ -102,6 +102,8 @@
 .stalebar .spin{flex:none;width:14px;height:14px;margin:0;border-width:2px}
 .stalebar.err{background:#fff1dc;color:#8a5300}
 .stalebar .favtext{flex:1 1 220px}
+/* 「気になる」を外した知らせは、取得中の帯より読めるよう、カードと同じ地と枠にして左端に色の線を入れる */
+#favBar{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);color:var(--text);font-size:13px}
 @media (prefers-color-scheme:dark){.stalebar.err{background:#3a2c14;color:#ffcf85}}
 .card.fresh{box-shadow:0 0 0 2px var(--accent)}
 /* 新着の印。空席・ESCAPE.ID の一覧と同じく、カードの上の縁から垂れ下がるタグにする（状態の札と見分けやすく、情報の行もずらさない） */
@@ -976,7 +978,10 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       checked = true;
       // 前回の記録のうち、本当に外れているものだけを知らせる（外す前に落ちたものは、今回の対象に入る）
       done = done.filter((d) => d?.mysteryId && !interested.has(d.mysteryId));
-      const keep = new Set(readList(FAV_KEEP_KEY));
+      // 残す作品のうち、ナゾヒロバで手で外したもの（もう気になるに無いもの）は記録から消す
+      const keepList = readList(FAV_KEEP_KEY);
+      const keep = new Set(keepList.filter((id) => interested.has(id)));
+      if (keep.size !== keepList.length) writeList(FAV_KEEP_KEY, [...keep]);
       const dayAgo = Date.now() - 864e5;
       const targets = [...new Map(items.filter((r) => r.mysteryId && interested.has(r.mysteryId) && !keep.has(r.mysteryId) && Date.parse(r.postedAt) <= dayAgo).map((r) => [r.mysteryId, r])).values()];
       for (const r of targets) {
