@@ -101,6 +101,7 @@
 .stalebar[hidden]{display:none}
 .stalebar .spin{flex:none;width:14px;height:14px;margin:0;border-width:2px}
 .stalebar.err{background:#fff1dc;color:#8a5300}
+.stalebar .favtext{flex:1 1 220px}
 @media (prefers-color-scheme:dark){.stalebar.err{background:#3a2c14;color:#ffcf85}}
 .card.fresh{box-shadow:0 0 0 2px var(--accent)}
 /* 新着の印。空席・ESCAPE.ID の一覧と同じく、カードの上の縁から垂れ下がるタグにする（状態の札と見分けやすく、情報の行もずらさない） */
@@ -515,6 +516,8 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     spoiler: r.containsSpoiler === true,
     review: (r.review ?? "").replaceAll("\r\n", "\n"),
     photos: (r.allPhotoUrls ?? []).filter((u) => u?.includes("supabase.co/storage")),
+    // 投稿日時。「気になる」を外すかの判定に使う（前回の一覧には無いことがある）
+    postedAt: r.createdAt ?? "",
   });
   let fetchedAt = null;
   // 取得時刻は「何分前」を添えて出す。アプリを裏に残していると、古いデータを見ていることに気づきにくいため。
@@ -763,6 +766,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   </div>
 </div>
 <div id="staleBar" class="stalebar" role="status" hidden></div>
+<div id="favBar" class="stalebar" role="status" hidden></div>
 <div class="countrow"><div class="left"><div id="count"></div><button id="jump" class="clear jump" type="button" title="この絞り込みを外す" hidden></button><button id="clear" class="clear" type="button" hidden>条件をクリア</button></div>
   <div class="sortbox" role="group" aria-label="並び順">
     <label class="sortkey"><span class="sr">並び順</span><select id="sortKey">
@@ -887,6 +891,111 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     $("toast").hidden = false;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => ($("toast").hidden = true), 3500);
+  };
+  // ナゾ活を投稿して1日以上たった作品の「気になる」を外す（ナゾヒロバではプレイ済みにしても「気になる」が残るため）。
+  // 最新の一覧を取れたときに裏で動かし、外した結果だけを帯で知らせる。1件ずつ外すので、途中でアプリを落としても、
+  // 次に開いたときに残りだけが対象になる（2度外すことも、外し漏れもない）。
+  // 外す直前に、その作品をこの端末の localStorage に書いておき、落ちて知らせられなかった分は次に開いたときに一緒に出す。
+  // 「元に戻す」で付け直した作品も localStorage に覚え、以後は外さない（端末ごと）
+  const FAV_DONE_KEY = "nazokatsuViewerUnfavored";
+  const FAV_KEEP_KEY = "nazokatsuViewerKeepFavorite";
+  const readList = (key) => {
+    try {
+      const v = JSON.parse(localStorage.getItem(key) ?? "[]");
+      return Array.isArray(v) ? v : [];
+    } catch {
+      return [];
+    }
+  };
+  const writeList = (key, list) => {
+    try {
+      if (list.length) localStorage.setItem(key, JSON.stringify(list));
+      else localStorage.removeItem(key);
+    } catch {}
+  };
+  // 「気になる」（status 1）の作品IDの集まり
+  const fetchInterested = async (auth) => {
+    const res = await fetch(`/api/v2/favorites/list?uid=${encodeURIComponent(auth.uid)}`, { headers: auth.headers });
+    if (!res.ok) throw new Error(`「気になる」の取得に失敗しました（${res.status}）`);
+    const j = await res.json();
+    return new Set((j.favorites ?? []).filter((f) => f.status === 1).map((f) => f.id));
+  };
+  // サイト本体と同じ POST / DELETE /api/v2/favorites
+  const setInterested = async (auth, mysteryId, on) => {
+    const res = await fetch("/api/v2/favorites", {
+      method: on ? "POST" : "DELETE",
+      headers: { ...auth.headers, "content-type": "application/json" },
+      body: JSON.stringify({ uid: auth.uid, mysteryId, status: 1 }),
+    });
+    const j = res.ok ? await res.json().catch(() => null) : null;
+    if (!j?.success) throw new Error(`「気になる」を${on ? "付け直せ" : "外せ"}ませんでした（${res.status}）`);
+  };
+  const showUnfavored = (done) => {
+    const bar = $("favBar");
+    if (!done.length) return;
+    // 出したら記録は消す（元に戻すのは、この帯から）
+    writeList(FAV_DONE_KEY, []);
+    const text = document.createElement("span");
+    text.className = "favtext";
+    text.textContent = `ナゾ活を投稿した作品の「気になる」を${done.length}件外しました：${done.map((d) => d.title || "（作品名なし）").join("、")}`;
+    const undo = document.createElement("button");
+    undo.type = "button";
+    undo.className = "clear";
+    undo.textContent = "元に戻す";
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "clear";
+    close.textContent = "閉じる";
+    close.addEventListener("click", () => (bar.hidden = true));
+    undo.addEventListener("click", async () => {
+      undo.disabled = close.disabled = true;
+      try {
+        const auth = await getAuth();
+        // すでに付いているもの（途中で落ちた後の押し直しなど）は付け直さない
+        const interested = await fetchInterested(auth);
+        for (const d of done) {
+          if (!interested.has(d.mysteryId)) await setInterested(auth, d.mysteryId, true);
+          writeList(FAV_KEEP_KEY, [...new Set([...readList(FAV_KEEP_KEY), d.mysteryId])]);
+        }
+        bar.hidden = true;
+        toast(`「気になる」に${done.length}件戻しました。この端末では、これらを自動で外しません`);
+      } catch (e) {
+        undo.disabled = close.disabled = false;
+        notify(e.message, "元に戻せませんでした");
+      }
+    });
+    bar.replaceChildren(text, undo, close);
+    bar.hidden = false;
+  };
+  const unfavorite = async (items) => {
+    let done = readList(FAV_DONE_KEY);
+    let checked = false;
+    try {
+      const auth = await getAuth();
+      const interested = await fetchInterested(auth);
+      checked = true;
+      // 前回の記録のうち、本当に外れているものだけを知らせる（外す前に落ちたものは、今回の対象に入る）
+      done = done.filter((d) => d?.mysteryId && !interested.has(d.mysteryId));
+      const keep = new Set(readList(FAV_KEEP_KEY));
+      const dayAgo = Date.now() - 864e5;
+      const targets = [...new Map(items.filter((r) => r.mysteryId && interested.has(r.mysteryId) && !keep.has(r.mysteryId) && Date.parse(r.postedAt) <= dayAgo).map((r) => [r.mysteryId, r])).values()];
+      for (const r of targets) {
+        writeList(FAV_DONE_KEY, [...done, { mysteryId: r.mysteryId, title: r.title }]);
+        try {
+          await setInterested(auth, r.mysteryId, false);
+        } catch (e) {
+          // 外せなかったものは記録から除き、次に開いたときにやり直す
+          writeList(FAV_DONE_KEY, done);
+          throw e;
+        }
+        done = [...done, { mysteryId: r.mysteryId, title: r.title }];
+      }
+    } catch (e) {
+      console.warn(e);
+      // 「気になる」を読めなかったときは、前回の記録が本当に外れたか分からないので出さない（次に開いたときに確かめる）
+      if (!checked) return;
+    }
+    if (host.isConnected) showUnfavored(done);
   };
   // 変更点だけを確認してPATCHし、取得し直して反映を検証する
   const save = async (r, next, setBusy) => {
@@ -2148,6 +2257,7 @@ ${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
       const diff = applyFresh(fresh);
       saveCache();
       if (diff) toast(`最新にしました：${diff}`);
+      unfavorite(fresh);
     } catch (e) {
       if (!host.isConnected) return;
       const reload = document.createElement("button");
@@ -2204,5 +2314,8 @@ ${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
       if (memoProblem) toast(memoProblem);
     })();
     pullLatest();
-  } else if (memoProblem) toast(memoProblem);
+  } else {
+    if (memoProblem) toast(memoProblem);
+    unfavorite(data);
+  }
 })().catch((e) => alert("エラー: " + e.message));
