@@ -176,6 +176,8 @@
 .st-ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px}
 .sec{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
 .sec h2{margin:0 0 10px;font-size:15px}
+.sec .sub-h{margin:14px 0 4px;font-size:13px;color:var(--sub)}
+.sec h2+.sub-h{margin-top:0}
 .sec .note{margin:8px 0 0;font-size:12px;color:var(--sub)}
 .sec .none{margin:0;font-size:14px;color:var(--sub)}
 .todo{border-left:4px solid #e0a040}
@@ -196,12 +198,15 @@
 .barv{width:min(70%,30px);border-radius:4px 4px 0 0;background:var(--accent)}
 .col:hover .barv,.col:focus .barv{filter:brightness(1.15)}
 .col.sel .barv{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--accent)}
+/* 分布の棒は、件数のある棒すべてに数字を出す */
+.chart.dist{height:110px}
+.chart.dist .col.has .n{visibility:visible}
 .pickline{display:flex;align-items:center;gap:10px;min-height:32px;margin-top:8px;font-size:13px;color:var(--sub)}
 .pickline .clear{margin-left:auto}
-.ltable tr.go{cursor:pointer}
-@media (hover:hover){.ltable tr.go:hover td{background:var(--chip)}}
-.ltable tr.go:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.ltable .chev{width:1em;padding-left:0;text-align:right;font-size:18px;color:var(--sub)}
+.ltable tr.go,.dtable tr.go{cursor:pointer}
+@media (hover:hover){.ltable tr.go:hover td,.dtable tr.go:hover td{background:var(--chip)}}
+.ltable tr.go:focus-visible,.dtable tr.go:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.ltable .chev,.dtable .chev{width:1em;padding-left:0;text-align:right;font-size:18px;color:var(--sub)}
 .tile .d{margin-top:2px;font-size:12px;color:var(--sub)}
 .rec{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:0}
 .rec div{padding:8px 10px;border-radius:10px;background:var(--bg)}
@@ -211,12 +216,12 @@
 .summary{margin:0;padding:10px 12px;border-radius:10px;background:var(--bg);font:inherit;font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text}
 .axis{display:flex;gap:2px;margin-top:4px}
 .axis span{flex:1;text-align:center;font-size:11px;color:var(--sub)}
-.ltable{width:100%;border-collapse:collapse;font-size:14px}
-.ltable th{padding:4px;font-size:12px;font-weight:600;text-align:left;color:var(--sub)}
-.ltable td{padding:7px 4px;border-top:1px solid var(--line);vertical-align:middle}
-.ltable .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-.ltable th.num{text-align:right}
-.ltable .sub{color:var(--sub);font-size:12px}
+.ltable,.dtable{width:100%;border-collapse:collapse;font-size:14px}
+.ltable th,.dtable th{padding:4px;font-size:12px;font-weight:600;text-align:left;color:var(--sub)}
+.ltable td,.dtable td{padding:7px 4px;border-top:1px solid var(--line);vertical-align:middle}
+.ltable .num,.dtable .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ltable th.num,.dtable th.num{text-align:right}
+.ltable .sub,.dtable .sub{color:var(--sub);font-size:12px}
 .more{display:block;margin:8px auto 0;height:32px;padding:0 14px;font-size:13px;font-weight:600;border:0;border-radius:16px;background:var(--chip);color:var(--accent)}
 .best{margin:0;padding:0;list-style:none}
 .best li{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
@@ -1745,6 +1750,15 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   // 一覧の絞り込みとは別で、効かせるのは「公演型のみ」だけ。ナゾ活1件を作品1つとして数える（1作品に1件しか作れないため）
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   let statsYear = null;
+  // 集計の「公演型のみ」は次に開いたときも覚えておく。分類を取れずに使えない回も、覚えた選択は消さない
+  const STATS_ONSITE_KEY = "nazokatsuStatsOnsite";
+  let statsOnsiteWanted = (() => {
+    try {
+      return localStorage.getItem(STATS_ONSITE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  })();
   let statsOnsite = false;
   let statsAllLabels = false;
   const rate = (ok, ng) => (ok + ng ? `${Math.round((ok / (ok + ng)) * 100)}%` : "—");
@@ -1753,7 +1767,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     const thisYear = String(new Date().getFullYear());
     if (statsYear === null || (statsYear !== "all" && !years.includes(statsYear))) statsYear = years.includes(thisYear) ? thisYear : years[0] ?? "all";
     const canOnsite = onsiteOf.size > 0;
-    if (!canOnsite) statsOnsite = false;
+    statsOnsite = canOnsite && statsOnsiteWanted;
     const inScope = (r) => !(statsOnsite && r.onsite === false);
     const pool = data.filter(inScope);
     const rows = statsYear === "all" ? pool : pool.filter((r) => r.playDate.startsWith(statsYear));
@@ -1811,15 +1825,18 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
         return { items, n: items.length, axis: String(i + 1), name: `${statsYear}年${i + 1}月`, short: `${i + 1}月` };
       });
     }
+    // 棒グラフ。棒を押すと pickId の行に件数と「一覧で見る」を出す（data-chart で、どのグラフの棒かを見分ける）
+    const barChart = (cs, chartId, pickId, hint, cls = "") => {
+      const top = Math.max(0, ...cs.map((c) => c.n));
+      return `<div class="chart${cls}" data-chart="${chartId}">${cs
+        .map(
+          (c, i) =>
+            `<div class="col${c.n && c.n === top ? " peak" : ""}${c.n ? " has" : ""}" role="button" tabindex="0" data-i="${i}" title="${esc(`${c.short ?? c.name} ${c.n}件`)}" aria-label="${esc(`${c.short ?? c.name} ${c.n}件`)}"><span class="n" style="bottom:calc(${top ? (c.n / top) * 100 : 0}% + 2px)">${c.n}</span><div class="barv" style="height:${top ? (c.n / top) * 100 : 0}%"></div></div>`,
+        )
+        .join("")}</div><div class="axis">${cs.map((c) => `<span>${esc(c.axis)}</span>`).join("")}</div><div id="${pickId}" class="pickline">${hint}</div>`;
+    };
     const peak = Math.max(0, ...cols.map((c) => c.n));
-    const chart = cols.length
-      ? `<div class="chart">${cols
-          .map(
-            (c, i) =>
-              `<div class="col${c.n && c.n === peak ? " peak" : ""}" role="button" tabindex="0" data-i="${i}" title="${esc(`${c.short ?? c.name} ${c.n}件`)}" aria-label="${esc(`${c.short ?? c.name} ${c.n}件`)}"><span class="n" style="bottom:calc(${peak ? (c.n / peak) * 100 : 0}% + 2px)">${c.n}</span><div class="barv" style="height:${peak ? (c.n / peak) * 100 : 0}%"></div></div>`,
-          )
-          .join("")}</div><div class="axis">${cols.map((c) => `<span>${esc(c.axis)}</span>`).join("")}</div><div id="barPick" class="pickline">棒を押すと、その${statsYear === "all" ? "年" : "月"}のナゾ活を一覧で見られます</div>`
-      : "";
+    const chart = cols.length ? barChart(cols, "month", "barPick", `棒を押すと、その${statsYear === "all" ? "年" : "月"}のナゾ活を一覧で見られます`) : "";
     // レーベルごと。コラボは含まれる各レーベルに数える（一覧のレーベルの絞り込みと同じ）
     const byLabel = new Map();
     for (const r of rows) {
@@ -1859,6 +1876,35 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
           })
           .join("")}</ol>`
       : `<p class="none">満足度を付けたナゾ活がありません</p>`;
+    // 満足度の分布（0.5刻みの9本）。押すとその満足度のナゾ活を一覧に出す
+    const satCols = Array.from({ length: 9 }, (_, i) => {
+      const v = 1 + i / 2;
+      const items = rows.filter((r) => r.satisfaction !== "" && Math.round(Number(r.satisfaction) * 2) / 2 === v);
+      return { items, n: items.length, axis: Number.isInteger(v) ? String(v) : "", name: `${scopeName}・満足度★${v}`, short: `★${v}` };
+    });
+    const satChart = sats.length ? barChart(satCols, "sat", "satPick", "棒を押すと、その満足度のナゾ活を一覧で見られます", " dist") : `<p class="none">満足度を付けたナゾ活がありません</p>`;
+    // 難易度ごとの件数・成功率・平均満足度。難しいほど成功しにくいか、満足しやすいかを見る
+    const diffRows = [1, 2, 3, 4, 5].map((d) => {
+      const items = rows.filter((r) => r.difficulty !== "" && Number(r.difficulty) === d);
+      const ds = items.filter((r) => r.satisfaction !== "").map((r) => Number(r.satisfaction));
+      return {
+        d,
+        items,
+        ok: items.filter((r) => r.result === "成功").length,
+        ng: items.filter((r) => r.result === "失敗").length,
+        avg: ds.length ? `★${(ds.reduce((a, b) => a + b, 0) / ds.length).toFixed(2)}` : "—",
+      };
+    });
+    const diffCount = diffRows.reduce((a, g) => a + g.items.length, 0);
+    const diffTable = diffCount
+      ? `<table class="dtable"><thead><tr><th>難易度</th><th class="num">件数</th><th class="num">成功率</th><th class="num">平均満足度</th><th></th></tr></thead><tbody>${diffRows
+          .map((g) =>
+            g.items.length
+              ? `<tr class="go" tabindex="0" data-diff="${g.d}" title="一覧で見る"><td>${g.d}</td><td class="num">${g.items.length}</td><td class="num">${rate(g.ok, g.ng)}${g.ok + g.ng ? ` <span class="sub">${g.ok}/${g.ok + g.ng}</span>` : ""}</td><td class="num">${g.avg}</td><td class="chev" aria-hidden="true">›</td></tr>`
+              : `<tr><td>${g.d}</td><td class="num">0</td><td class="num">—</td><td class="num">—</td><td></td></tr>`,
+          )
+          .join("")}</tbody></table><p class="note">難易度を付けた${diffCount}件で数えています</p>`
+      : `<p class="none">難易度を付けたナゾ活がありません</p>`;
     // 未入力の案内。集計に効く満足度・成功/失敗と参加日が空のものを数え、一覧でまとめて埋められるようにする
     const noSat = rows.filter((r) => r.satisfaction === "");
     const noResult = rows.filter((r) => r.result === "");
@@ -1896,7 +1942,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
       ["遊んだレーベル", realLabels.length ? `${realLabels.length}${statsYear === "all" ? "" : `（初めて ${newLabels.length}）`}` : "—", newLabels.join("・")],
       ["はしごした日", ladder.length ? `${ladder.length}日` : "なし", ladder.length ? `最多 1日${ladder[0][1]}本（${fmtDay(ladder[0][0])}）` : ""],
       [`一番多く遊んだ${statsYear === "all" ? "年" : "月"}`, peakText || "—", ""],
-      ["合計プレイ時間", timed.length ? minuteLabel(totalMinutes) : "—", timed.length ? `時間を付けた${timed.length}件で` : ""],
+      ["合計プレイ時間", timed.length ? minuteLabel(totalMinutes) : "—", timed.length ? `時間を付けた${timed.length}件で・平均${minuteLabel(Math.round(totalMinutes / timed.length))}` : ""],
     ];
     const record = `<dl class="rec">${recRows
       .map(([k, v, s]) => `<div><dt>${k}</dt><dd>${esc(v)}${s ? `<span class="sub">${esc(s)}</span>` : ""}</dd></div>`)
@@ -1929,6 +1975,7 @@ ${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
     }</section>
 <section class="sec"><h2>${scopeName}の記録</h2>${record}</section>
 <section class="sec"><h2>レーベルごと</h2>${labelTable}<p class="note">成功率は、成功か失敗を付けたものの中での割合。コラボは含まれる各レーベルに数えます</p></section>
+<section class="sec"><h2>満足度と難易度</h2><h3 class="sub-h">満足度の分布</h3>${satChart}<h3 class="sub-h">難易度ごと</h3>${diffTable}</section>
 <section class="sec"><h2>${scopeName}のベスト</h2>${bestList}</section>
 <section class="sec"><h2>まとめをコピー</h2><pre id="summary" class="summary">${esc(summary)}</pre><button id="copySummary" class="more" type="button">コピーする</button><p class="note">ベスト3は、公開しているナゾ活から選びます。件数や成功率には非公開も入ります</p></section>`;
     // コピーできないとき（古いブラウザや権限なし）は、文章を選んだ状態にして手でコピーしてもらう
@@ -1951,7 +1998,10 @@ ${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
       renderStats();
     });
     $("statsOnsite").addEventListener("input", (e) => {
-      statsOnsite = e.target.checked;
+      statsOnsiteWanted = e.target.checked;
+      try {
+        localStorage.setItem(STATS_ONSITE_KEY, statsOnsiteWanted ? "1" : "0");
+      } catch {}
       renderStats();
     });
     $("moreLabels")?.addEventListener("click", () => {
@@ -1971,21 +2021,30 @@ ${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
       const m = shownLabels[Number(tr.dataset.i)][0];
       jumpTo(`${scopeName}・${m}`, rows.filter((r) => (r.maker ? labelsOfItem(r).includes(m) : m === "不明")));
     };
+    // 難易度の行を押すと、その難易度のナゾ活を一覧に出す
+    const goRow = (tr) => {
+      if (!tr.dataset.diff) return goLabel(tr);
+      const g = diffRows[Number(tr.dataset.diff) - 1];
+      jumpTo(`${scopeName}・難易度${g.d}`, g.items);
+    };
     for (const tr of $("stats").querySelectorAll("tr.go")) {
-      tr.addEventListener("click", () => goLabel(tr));
-      tr.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), goLabel(tr)));
+      tr.addEventListener("click", () => goRow(tr));
+      tr.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), goRow(tr)));
     }
     // 棒を押すと選んだ状態にし、下の行に件数と「一覧で見る」を出す
+    const charts = { month: [cols, "barPick", "barGo"], sat: [satCols, "satPick", "satGo"] };
     const pickBar = (el) => {
-      const c = cols[Number(el.dataset.i)];
-      for (const x of $("stats").querySelectorAll(".col.sel")) x.classList.remove("sel");
+      const chartEl = el.closest(".chart");
+      const [cs, pickId, goId] = charts[chartEl.dataset.chart];
+      const c = cs[Number(el.dataset.i)];
+      for (const x of chartEl.querySelectorAll(".col.sel")) x.classList.remove("sel");
       el.classList.add("sel");
-      const line = $("barPick");
+      const line = $(pickId);
       line.textContent = `${c.short ?? c.name} ${c.n}件`;
       if (c.n) {
         const b = document.createElement("button");
         b.type = "button";
-        b.id = "barGo";
+        b.id = goId;
         b.className = "clear";
         b.textContent = "一覧で見る ›";
         b.addEventListener("click", () => jumpTo(c.name, c.items));
