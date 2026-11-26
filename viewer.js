@@ -102,8 +102,8 @@
 .stalebar .spin{flex:none;width:14px;height:14px;margin:0;border-width:2px}
 .stalebar.err{background:#fff1dc;color:#8a5300}
 .stalebar .favtext{flex:1 1 220px}
-/* 「気になる」を外した知らせは、取得中の帯より読めるよう、カードと同じ地と枠にして左端に色の線を入れる */
-#favBar{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);color:var(--text);font-size:13px}
+/* 「気になる」を外した知らせは、地は一覧のカードと混ざらないよう取得中の帯と同じ灰色のまま、枠と左端の色の線と濃い文字で読めるようにする */
+#favBar{border:1px solid var(--line);border-left:3px solid var(--accent);color:var(--text);font-size:13px}
 @media (prefers-color-scheme:dark){.stalebar.err{background:#3a2c14;color:#ffcf85}}
 .card.fresh{box-shadow:0 0 0 2px var(--accent)}
 /* 新着の印。空席・ESCAPE.ID の一覧と同じく、カードの上の縁から垂れ下がるタグにする（状態の札と見分けやすく、情報の行もずらさない） */
@@ -232,6 +232,49 @@
 .best .rk{flex:none;width:1.6em;text-align:right;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums}
 .best .bt{min-width:0}
 .best a{display:block;margin-bottom:2px;font-size:15px;font-weight:600;line-height:1.4;color:var(--accent);text-decoration:none}
+.st-ctrl .recap-btn{margin-left:auto;height:32px;padding:0 14px;font-size:13px;font-weight:600;border:0;border-radius:16px;background:var(--btn);color:var(--btn-on)}
+/* 振り返り: 集計から開く1枚のまとめ。スクリーンショットで残す前提で、操作の部品は上の ✕ だけにする */
+.recap{position:fixed;inset:0;z-index:10;overflow:auto;background:var(--bg)}
+.recap[hidden]{display:none}
+.rc-close{position:sticky;top:0;z-index:1;display:flex;justify-content:flex-end;padding:8px 10px 0;pointer-events:none}
+.rc-close .icon{pointer-events:auto;background:var(--card);box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.rc{width:min(440px,100%);margin:-40px auto 0;padding:0 14px 28px}
+.rc-hero{margin:0 -14px 14px;padding:40px 22px 22px;border-radius:0 0 22px 22px;background:linear-gradient(140deg,#2457b8,#5b3fb0);color:#fff}
+.rc-hero .rc-y{font-size:13px;font-weight:700;letter-spacing:.2em;opacity:.8}
+.rc-hero h2{margin:2px 0 0;font-size:26px;line-height:1.3}
+.rc-hero .rc-asof{margin:4px 0 0;font-size:12px;opacity:.8}
+.rc-big{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.rc-big div{padding:10px 8px;border-radius:12px;background:rgba(255,255,255,.14);text-align:center}
+.rc-big b{display:block;font-size:26px;line-height:1.2;font-variant-numeric:tabular-nums}
+.rc-big span{font-size:12px;opacity:.85}
+.rc-cmp{margin:10px 0 0;font-size:13px;opacity:.9}
+.rc-sec{margin-bottom:10px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.rc-sec h3{margin:0 0 10px;font-size:13px;color:var(--sub)}
+.rc-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rc-two div{font-size:12px;color:var(--sub)}
+.rc-two b{display:block;margin:2px 0;font-size:24px;color:var(--text);font-variant-numeric:tabular-nums}
+.rc-bars{display:flex;align-items:flex-end;gap:3px;height:90px;padding-top:16px;border-bottom:1px solid var(--line)}
+.rc-bars div{position:relative;flex:1;display:flex;justify-content:center;height:100%;align-items:flex-end}
+.rc-bars i{display:block;width:min(70%,22px);border-radius:3px 3px 0 0;background:var(--accent)}
+.rc-bars span{position:absolute;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700}
+.rc-axis{display:flex;gap:3px;margin-top:3px}
+.rc-axis span{flex:1;text-align:center;font-size:10px;color:var(--sub)}
+.rc-rank{margin:0;padding:0;list-style:none}
+.rc-rank li{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+.rc-rank li:first-child{border-top:0;padding-top:0}
+.rc-rank .rk{flex:none;width:1.4em;font-size:17px;font-weight:800;color:var(--accent);text-align:center}
+.rc-rank .t{flex:1;min-width:0;font-size:15px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
+.rc-rank .v{flex:none;font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums}
+.rc-facts{display:grid;gap:8px;margin:0}
+.rc-facts div{display:flex;justify-content:space-between;gap:12px;font-size:14px}
+.rc-facts dt{color:var(--sub)}
+.rc-facts dd{margin:0;font-weight:700;text-align:right;overflow-wrap:anywhere}
+.rc-facts .sub{display:block;font-size:12px;font-weight:400;color:var(--sub)}
+.rc-ends{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rc-ends div{padding:8px 10px;border-radius:10px;background:var(--bg)}
+.rc-ends .k{font-size:12px;color:var(--sub)}
+.rc-ends .t{margin-top:2px;font-size:14px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
+.rc-foot{margin:14px 0 0;font-size:11px;color:var(--sub);text-align:center}
 @media (max-width:640px){
 .tl{gap:8px}
 .tabs button{height:26px;padding:0 10px;font-size:13px}
@@ -337,6 +380,7 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
 <div class="root">
 <div class="top"><div class="tl"><h1>自分のナゾ活</h1><div id="tabs" class="tabs" role="tablist" hidden><button id="tabList" type="button" role="tab" aria-selected="true">一覧</button><button id="tabStats" type="button" role="tab" aria-selected="false">集計</button></div></div><div class="topbtns"><div class="menuwrap"><button id="menuBtn" class="icon" type="button" aria-label="メニュー" aria-haspopup="true" aria-expanded="false">⋯</button><div id="menu" class="menu" hidden><div id="fetchedAt" class="menu-info">取得中…</div><button id="refetch" type="button">最新を取得</button><button id="memoSet" type="button">メモの設定（トークン）</button></div></div><button id="close" class="icon" type="button" aria-label="閉じる" title="閉じる（Esc）">✕</button></div></div>
 <div id="main"><div class="loading"><div class="spin"></div>ナゾ活を取得中…</div></div>
+<div id="recap" class="recap" role="dialog" aria-label="振り返り" hidden></div>
 <div id="dlg" class="dlg-back" hidden></div>
 <div id="toast" hidden></div>
 </div>`;
@@ -360,11 +404,12 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
   const requestClose = async () => {
     if (await confirmDiscard("破棄して閉じる")) close();
   };
-  // Esc は、開いているシート → メニュー → ビューアの順に1つずつ閉じる。
+  // Esc は、開いているシート → 振り返り → メニュー → ビューアの順に1つずつ閉じる。
   // 日本語入力の変換を Esc で取り消したときは何もしない
   const onKey = (e) => {
     if (e.key !== "Escape" || e.isComposing || e.keyCode === 229) return;
     if (closeDialog) return closeDialog();
+    if (!$("recap").hidden) return setRecap(false);
     if (!$("menu").hidden) return setMenu(false);
     requestClose();
   };
@@ -2075,9 +2120,60 @@ mark{background:#ffe96b;color:#222;border-radius:2px}
     ]
       .filter(Boolean)
       .join("\n");
+    // 振り返り: スクリーンショットで残す1枚。作品名はまとめと同じく公開しているナゾ活からだけ出す
+    const now = new Date();
+    const asOf = statsYear === "all" ? `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}時点` : statsYear === thisYear ? `${now.getMonth() + 1}/${now.getDate()}時点` : "";
+    const pubDated = rows.filter((r) => !r.isPrivate && r.playDate).sort((a, b) => a.playDate.localeCompare(b.playDate));
+    const rcTop = Math.max(0, ...cols.map((c) => c.n));
+    const rcBars = cols.length
+      ? `<section class="rc-sec"><h3>${statsYear === "all" ? "年ごと" : "月ごと"}</h3><div class="rc-bars">${cols
+          .map((c) => `<div><i style="height:${rcTop ? (c.n / rcTop) * 100 : 0}%"></i>${c.n ? `<span style="bottom:calc(${(c.n / rcTop) * 100}% + 1px)">${c.n}</span>` : ""}</div>`)
+          .join("")}</div><div class="rc-axis">${cols.map((c) => `<span>${esc(c.axis)}</span>`).join("")}</div></section>`
+      : "";
+    const rcFacts = [
+      statsYear !== "all" && newLabels.length && ["初めてのレーベル", `${newLabels.length}`, newLabels.join("・")],
+      ladder.length && ["はしごした日", `${ladder.length}日`, `最多 1日${ladder[0][1]}本（${fmtDay(ladder[0][0])}）`],
+      // 同数が多いと長い列挙になるだけなので、3つまでのときだけ出す
+      peakText && cols.filter((c) => c.n === peak).length <= 3 && [`一番多く遊んだ${statsYear === "all" ? "年" : "月"}`, peakText, ""],
+      timed.length && ["平均プレイ時間", minuteLabel(Math.round(totalMinutes / timed.length)), ""],
+    ].filter(Boolean);
+    const rcEnd = (k, r) => `<div><div class="k">${k}</div><div class="t">${esc(r.title)}</div><div class="k">${esc(fmtDay(r.playDate))}</div></div>`;
+    const recapHtml = `<div class="rc-close"><button id="recapClose" class="icon" type="button" aria-label="振り返りを閉じる" title="閉じる（Esc）">✕</button></div><article class="rc">
+<header class="rc-hero"><div class="rc-y">${statsYear === "all" ? "ALL TIME" : statsYear}</div><h2>${statsYear === "all" ? "これまでのナゾ活" : `${statsYear}年のナゾ活`}${statsOnsite ? "（公演型）" : ""}</h2>${asOf ? `<p class="rc-asof">${asOf}</p>` : ""}
+<div class="rc-big"><div><b>${rows.length}</b><span>件</span></div><div><b>${byDay.size}</b><span>日</span></div><div><b>${timed.length ? minuteLabel(totalMinutes) : "—"}</b><span>${timed.length < rows.length && timed.length ? `時間（${timed.length}件分）` : "プレイ時間"}</span></div></div>
+${prev ? `<p class="rc-cmp">${prev.cut ? `${prev.year}年の同じ時期` : `${prev.year}年`}より ${sign(rows.length - prev.n)}件</p>` : ""}</header>
+<section class="rc-sec rc-two"><div>成功率<b>${rate(ok, ng)}</b>${ok + ng ? `成功${ok}・失敗${ng}` : ""}</div><div>平均満足度<b>${avg === "—" ? avg : `★${avg}`}</b>${sats.length ? `${sats.length}件で` : ""}</div></section>
+${rcBars}${
+      realLabels.length
+        ? `<section class="rc-sec"><h3>よく行ったレーベル</h3><ol class="rc-rank">${realLabels
+            .slice(0, 3)
+            .map(([m, g], i) => `<li><span class="rk">${i + 1}</span><span class="t">${esc(m)}</span><span class="v">${g.n}件</span></li>`)
+            .join("")}</ol></section>`
+        : ""
+    }${
+      pubBest.length
+        ? `<section class="rc-sec"><h3>ベスト${pubBest.length}</h3><ol class="rc-rank">${pubBest
+            .map((r, i) => `<li><span class="rk">${i + 1}</span><span class="t">${esc(r.title)}</span><span class="v">★${esc(r.satisfaction)}</span></li>`)
+            .join("")}</ol></section>`
+        : ""
+    }${
+      rcFacts.length
+        ? `<section class="rc-sec"><dl class="rc-facts">${rcFacts.map(([k, v, s]) => `<div><dt>${k}</dt><dd>${esc(v)}${s ? `<span class="sub">${esc(s)}</span>` : ""}</dd></div>`).join("")}</dl></section>`
+        : ""
+    }${
+      pubDated.length >= 2
+        ? `<section class="rc-sec rc-ends">${rcEnd(statsYear === "all" ? "最初の1本" : "はじめの1本", pubDated[0])}${rcEnd(asOf ? "最新の1本" : "最後の1本", pubDated.at(-1))}</section>`
+        : ""
+    }<p class="rc-foot">ナゾヒロバの記録から${pubBest.length || pubDated.length >= 2 ? "・作品名は公開しているナゾ活から" : ""}</p></article>`;
+    if (!$("recap").hidden) {
+      if (rows.length) renderRecap(recapHtml);
+      else setRecap(false);
+    }
     $("stats").innerHTML = `<div class="st-ctrl"><div id="statsYears" class="seg">${[...years, "all"]
       .map((y) => `<button type="button" data-year="${y}" aria-pressed="${y === statsYear}">${y === "all" ? "全期間" : `${y}年`}</button>`)
-      .join("")}</div><label class="chip"><input id="statsOnsite" type="checkbox"${statsOnsite ? " checked" : ""}${canOnsite ? "" : " disabled"}>公演型のみ</label></div>
+      .join("")}</div><label class="chip"><input id="statsOnsite" type="checkbox"${statsOnsite ? " checked" : ""}${canOnsite ? "" : " disabled"}>公演型のみ</label>${
+      rows.length ? `<button id="openRecap" class="recap-btn" type="button">振り返り ›</button>` : ""
+    }</div>
 ${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
 <div class="tile"><div class="k">件数</div><div class="v">${rows.length}</div>${cmpLine(cmp.n)}</div>
 <div class="tile"><div class="k">成功率</div><div class="v">${rate(ok, ng)}</div><div class="s">成功${ok} / 失敗${ng}</div>${cmpLine(cmp.rate)}</div>
@@ -2104,6 +2200,10 @@ ${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
         getSelection().addRange(range);
         toast("コピーできませんでした。選んだ文章をコピーしてください");
       }
+    });
+    $("openRecap")?.addEventListener("click", () => {
+      renderRecap(recapHtml);
+      setRecap(true);
     });
     $("statsYears").addEventListener("click", (e) => {
       const b = e.target.closest("button");
@@ -2169,6 +2269,17 @@ ${todo}<section class="sec"><h2>${scopeName}の件数</h2><div class="tiles">
       el.addEventListener("click", () => pickBar(el));
       el.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), pickBar(el)));
     }
+  };
+  // 振り返りは集計の上に重ねる。最新を取り直したときは、開いたまま中身だけ描き直す
+  const renderRecap = (html) => {
+    $("recap").innerHTML = html;
+    $("recapClose").addEventListener("click", () => setRecap(false));
+  };
+  const setRecap = (open) => {
+    if (open) $("recap").scrollTop = 0;
+    $("recap").hidden = !open;
+    if (open) $("recapClose").focus();
+    else $("openRecap")?.focus();
   };
   // 一覧のスクロール位置は、集計を見て戻ったときに戻す。集計は毎回先頭から
   let onStats = false;
